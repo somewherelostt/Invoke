@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">INVOKE</string>
+    <string name="accessibility_description">INVOKE voice assistant — enables floating bubble for voice commands and text input in any app</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_step1_title">Allow Microphone</string>
+    <string name="onboarding_step1_desc">INVOKE needs microphone access to hear your voice commands</string>
+    <string name="onboarding_step2_title">Enable Accessibility</string>
+    <string name="onboarding_step2_desc">INVOKE uses accessibility to insert text and detect text fields in any app</string>
+    <string name="onboarding_step3_title">Local AI</string>
+    <string name="onboarding_step3_desc">All processing happens on your device. Whisper for speech, Qwen for understanding. No data leaves your phone.</string>
+    <string name="onboarding_step4_title">You\'re Ready</string>
+    <string name="onboarding_step4_desc">Tap the floating bubble in any app to start. Hold to record, release to act.</string>
+
+    <!-- Settings -->
+    <string name="settings_ollama_endpoint">Ollama Endpoint</string>
+    <string name="settings_ollama_model">Ollama Model</string>
+    <string name="settings_composio_key">Composio API Key</string>
+    <string name="settings_confidence">Confidence Threshold</string>
+</resources>
