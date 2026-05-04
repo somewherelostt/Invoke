@@ -1346,7 +1346,7 @@ class MainActivity : AppCompatActivity() {
             if (result.isFailure) {
                 val error = result.exceptionOrNull()
                 Log.e(TAG, "Privy sendCode threw", error)
-                authStatusMessage = error?.message ?: "Could not send code."
+                authStatusMessage = friendlyAuthError(error?.message)
                 render()
             } else if (sendResult?.isSuccess == true) {
                 pendingAuthEmail = cleanEmail
@@ -1358,7 +1358,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val error = sendResult?.exceptionOrNull()
                 Log.e(TAG, "Privy sendCode failed", error)
-                authStatusMessage = error?.message ?: "Could not send code. Check Privy email login settings."
+                authStatusMessage = friendlyAuthError(error?.message)
                 render()
             }
         }
@@ -1388,7 +1388,7 @@ class MainActivity : AppCompatActivity() {
             if (result.isFailure) {
                 val error = result.exceptionOrNull()
                 Log.e(TAG, "Privy loginWithCode threw", error)
-                authStatusMessage = error?.message ?: "Could not verify code."
+                authStatusMessage = friendlyAuthError(error?.message)
                 render()
             } else if (loginResult?.isSuccess == true) {
                 val user = loginResult.getOrNull()
@@ -1411,9 +1411,18 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val error = loginResult?.exceptionOrNull()
                 Log.e(TAG, "Privy loginWithCode failed", error)
-                authStatusMessage = error?.message ?: "Invalid code."
+                authStatusMessage = friendlyAuthError(error?.message, "Invalid code.")
                 render()
             }
+        }
+    }
+
+    private fun friendlyAuthError(message: String?, fallback: String = "Could not send code. Check Privy email login settings."): String {
+        val clean = message.orEmpty()
+        return if (clean.contains("allowed app identifier", ignoreCase = true)) {
+            "Privy setup needed: add com.invoke.android as an allowed native app identifier in the Privy dashboard, then try email sign-in again."
+        } else {
+            clean.ifBlank { fallback }
         }
     }
 

@@ -58,3 +58,10 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+# Local agent / skill installs
+.agents/
+.claude/
+.kiro/
+.windsurf/
+skills-lock.json
