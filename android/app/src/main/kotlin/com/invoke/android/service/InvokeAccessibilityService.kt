@@ -86,6 +86,10 @@ class InvokeAccessibilityService : AccessibilityService() {
         }
     }
 
+    fun triggerVoiceAction() {
+        onBubbleTap()
+    }
+
     // ─── Recording ───
 
     private fun startRecording() {

@@ -1,6 +1,8 @@
 package com.invoke.android.ui
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -24,11 +26,13 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.invoke.android.BuildConfig
 import com.google.android.material.button.MaterialButton
 import com.invoke.android.agent.LocalModelClient
+import com.invoke.android.service.InvokeAccessibilityService
 import com.invoke.android.stt.SttEngine
 import com.invoke.android.ui.onboarding.BubbleOpacity
 import com.invoke.android.ui.onboarding.BubbleSize
@@ -65,6 +69,7 @@ class MainActivity : AppCompatActivity() {
     private var returnHomeAfterAuth = false
     private var accountScreenOpen = false
     private var authStatusMessage = ""
+    private var selectedQuickAction = "Dictate or ask Invoke to act"
 
     private fun appBackground(): GradientDrawable =
         GradientDrawable(
@@ -128,7 +133,7 @@ class MainActivity : AppCompatActivity() {
                 render()
             })
         }
-        root += voiceInputDock("Tap here to start a voice action", "Start using Invoke") { finishOnboarding() }
+        root += voiceInputDock("Tap here to start a voice action", "Start using Invoke") { handleVoiceAction() }
         root += secondaryButton("Connect local Ollama") {
             root.removeAllViews()
             localModelScreen()
@@ -278,17 +283,33 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             listOf(
                 listOf(
-                    Triple("◎", "Clean up text", "Rewrite a selected message"),
-                    Triple("◇", "Search faster", "Ask across apps")
+                    QuickAction("◎", "Clean up text", "Rewrite a selected message") {
+                        selectedQuickAction = "Clean up selected text"
+                        currentTab = HomeTab.STYLE
+                        render()
+                    },
+                    QuickAction("◇", "Search faster", "Ask across apps") {
+                        selectedQuickAction = "Search the web"
+                        copyToClipboard("Invoke prompt", "Search the web for ")
+                        toast("Prompt copied. Finish the query, then use the bubble.")
+                    }
                 ),
                 listOf(
-                    Triple("≋", "Save snippets", "Reuse common phrases"),
-                    Triple("✳", "Local AI", "Keep work on device")
+                    QuickAction("≋", "Save snippets", "Reuse common phrases") {
+                        selectedQuickAction = "Insert a saved snippet"
+                        currentTab = HomeTab.SNIPPETS
+                        render()
+                    },
+                    QuickAction("✳", "Local AI", "Keep work on device") {
+                        selectedQuickAction = "Use local model"
+                        root.removeAllViews()
+                        localModelScreen()
+                    }
                 )
             ).forEach { rowItems ->
                 addView(row {
                     rowItems.forEachIndexed { index, item ->
-                        addView(suggestionTile(item.first, item.second, item.third).apply {
+                        addView(suggestionTile(item).apply {
                             layoutParams = LinearLayout.LayoutParams(0, dp(138), 1f).apply {
                                 setMargins(
                                     if (index == 0) 0 else dp(4),
@@ -304,26 +325,29 @@ class MainActivity : AppCompatActivity() {
             matchCard()
         }
 
-    private fun suggestionTile(mark: String, title: String, subtitle: String): View =
+    private fun suggestionTile(action: QuickAction): View =
         LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(12), dp(14), dp(12))
             background = rounded(0xAAFFFFFF.toInt(), dp(12), 0x88FFFFFF.toInt(), dp(1))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { action.onClick() }
             addView(TextView(this@MainActivity).apply {
-                text = mark
+                text = action.mark
                 setTextColor(InvokeColor.Primary)
                 textSize = 24f
                 includeFontPadding = false
             })
             addView(spacer(20))
             addView(TextView(this@MainActivity).apply {
-                text = title
+                text = action.title
                 setTextColor(InvokeColor.TextPrimary)
                 textSize = 15f
                 typeface = Typeface.DEFAULT_BOLD
             })
             addView(TextView(this@MainActivity).apply {
-                text = subtitle
+                text = action.subtitle
                 setTextColor(InvokeColor.TextTertiary)
                 textSize = 12f
                 setLineSpacing(2f, 1.05f)
@@ -584,9 +608,21 @@ class MainActivity : AppCompatActivity() {
 
         when (currentTab) {
             HomeTab.HOME -> homeTab()
-            HomeTab.DICTIONARY -> libraryTab("Dictionary", "No custom words yet", "Add names, project terms, and phrases Invoke should preserve.")
+            HomeTab.DICTIONARY -> libraryTab(
+                "Dictionary",
+                "No custom words yet",
+                "Add names, project terms, and phrases Invoke should preserve.",
+                KEY_DICTIONARY,
+                "Project name, person, custom phrase"
+            )
             HomeTab.STYLE -> styleTab()
-            HomeTab.SNIPPETS -> libraryTab("Snippets", "No snippets yet", "Save reusable phrases and short commands.")
+            HomeTab.SNIPPETS -> libraryTab(
+                "Snippets",
+                "No snippets yet",
+                "Save reusable phrases and short commands.",
+                KEY_SNIPPETS,
+                "Reusable phrase or voice command"
+            )
         }
         bottomNav()
     }
@@ -594,9 +630,7 @@ class MainActivity : AppCompatActivity() {
     private fun homeTab() {
         root += heroPanel()
         root += suggestionGrid()
-        root += voiceInputDock("Tap here to start a dialog", "Turn on voice bubble") {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
+        root += voiceInputDock("Tap to record: $selectedQuickAction", "Start voice action") { handleVoiceAction() }
         root += activationCard()
         root += accountPrivacyCard()
     }
@@ -613,12 +647,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun libraryTab(title: String, emptyTitle: String, emptyDescription: String) {
+    private fun libraryTab(title: String, emptyTitle: String, emptyDescription: String, prefKey: String, hint: String) {
+        val entries = savedList(prefKey)
         root += card {
             addView(sectionTitle(title))
-            addView(emptyState(emptyTitle, emptyDescription))
+            if (entries.isEmpty()) {
+                addView(emptyState(emptyTitle, emptyDescription))
+            } else {
+                entries.forEach { entry ->
+                    addView(libraryRow(
+                        entry = entry,
+                        copyAction = {
+                            copyToClipboard(title, entry)
+                            toast("$title copied")
+                        },
+                        removeAction = {
+                            removeSavedItem(prefKey, entry)
+                            render()
+                        }
+                    ))
+                }
+            }
             addView(primaryButton("Add ${title.lowercase().removeSuffix("s")}") {
-                toast("$title editor coming next")
+                showAddItemDialog(title, hint, prefKey)
             })
         }
     }
@@ -645,7 +696,9 @@ class MainActivity : AppCompatActivity() {
             addView(settingsRow("App version", "1.0.0"))
             addView(secondaryButton("Advanced backend configuration") { advancedBackendScreen() })
             addView(secondaryButton("Report an issue") { openUrl("https://github.com/somewherelostt/Invoke/issues") })
-            addView(secondaryButton("Share feedback") { toast("Feedback link coming soon") })
+            addView(secondaryButton("Share feedback") {
+                openUrl("mailto:feedback@invoke.local?subject=Invoke%20Android%20feedback")
+            })
         }
         root += primaryButton("Back to app") {
             showSettings = false
@@ -682,6 +735,66 @@ class MainActivity : AppCompatActivity() {
             addView(secondaryButton("Privacy settings") {
                 showSettings = true
                 render()
+            })
+        }
+
+    private fun handleVoiceAction() {
+        if (!prefs.getBoolean(KEY_ONBOARDING_DONE, false)) {
+            finishOnboarding()
+        }
+        if (!checkMicPermission()) {
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), REQ_MIC)
+            return
+        }
+        if (!isAccessibilityEnabled()) {
+            toast("Turn on Invoke Accessibility to use voice actions.")
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            return
+        }
+
+        val service = InvokeAccessibilityService.instance
+        if (service == null) {
+            toast("Invoke service is starting. Tap the floating bubble when it appears.")
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            return
+        }
+
+        service.triggerVoiceAction()
+        toast("Recording started. Tap the bubble again to stop.")
+    }
+
+    private fun showAddItemDialog(title: String, hint: String, prefKey: String) {
+        val field = input(hint)
+        AlertDialog.Builder(this)
+            .setTitle("Add $title")
+            .setView(field)
+            .setPositiveButton("Save") { _, _ ->
+                val value = field.text.toString().trim()
+                if (value.isNotBlank()) {
+                    addSavedItem(prefKey, value)
+                    render()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun libraryRow(entry: String, copyAction: () -> Unit, removeAction: () -> Unit): View =
+        row {
+            setPadding(0, dp(6), 0, dp(6))
+            addView(TextView(this@MainActivity).apply {
+                text = entry
+                setTextColor(InvokeColor.TextPrimary)
+                textSize = 15f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(secondaryButton("Copy", copyAction).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(84), LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(dp(8), 0, dp(6), 0)
+                }
+            })
+            addView(secondaryButton("Remove", removeAction).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(104), LinearLayout.LayoutParams.WRAP_CONTENT)
             })
         }
 
@@ -1469,6 +1582,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun privacyMode(): Boolean = prefs.getBoolean(KEY_PRIVACY_MODE, setupType() == SetupType.LOCAL)
 
+    private fun savedList(key: String): List<String> =
+        prefs.getStringSet(key, emptySet()).orEmpty().toList().sorted()
+
+    private fun addSavedItem(key: String, value: String) {
+        val updated = savedList(key).toMutableSet().apply { add(value) }
+        prefs.edit().putStringSet(key, updated).apply()
+    }
+
+    private fun removeSavedItem(key: String, value: String) {
+        val updated = savedList(key).toMutableSet().apply { remove(value) }
+        prefs.edit().putStringSet(key, updated).apply()
+    }
+
     private fun statusLabel(status: ConnectionStatus): String =
         when (status) {
             ConnectionStatus.IDLE -> "Not tested"
@@ -1496,6 +1622,11 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 
+    private fun copyToClipboard(label: String, text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+    }
+
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         currentFocus?.let { imm.hideSoftInputFromWindow(it.windowToken, 0) }
@@ -1514,6 +1645,13 @@ class MainActivity : AppCompatActivity() {
         SNIPPETS("Snippets")
     }
 
+    private data class QuickAction(
+        val mark: String,
+        val title: String,
+        val subtitle: String,
+        val onClick: () -> Unit
+    )
+
     companion object {
         private const val PREFS = "invoke_prefs"
         private const val REQ_MIC = 100
@@ -1531,6 +1669,8 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_AUTH_TOKEN = "privy_access_token"
         private const val KEY_AUTH_EMAIL = "privy_user_email"
         private const val KEY_STYLE = "default_style"
+        private const val KEY_DICTIONARY = "dictionary_entries"
+        private const val KEY_SNIPPETS = "snippet_entries"
         private const val TAG = "InvokeAuth"
     }
 }
