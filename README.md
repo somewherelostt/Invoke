@@ -1,16 +1,35 @@
 # Invoke
 
-[Live app](https://invoke.maazx.dev/)
+## Voice Actions For Every App
+
+**Speak once. Invoke handles the rest.**
+
+Invoke is a local-first voice command layer for desktop, Windows, and Android. It turns natural speech into messages, notes, snippets, searches, and real app actions using local AI through Ollama, intent routing with Qwen 3 0.6B, and tool execution through Composio.
+
+**Live app:** https://invoke.maazx.dev/  
+**GitHub:** https://github.com/somewherelostt/Invoke
+
+[View Live App](https://invoke.maazx.dev/) · [See How It Works](#how-it-works) · [Integrations](#integrations)
 
 ---
 
-# The Voice Action Assistant For Every App
+![Invoke hero screenshot](public/1.png)
 
-Local-first voice routing for desktop, Windows, and Android.
+---
 
-Invoke turns natural speech into messages, notes, snippets, searches, and real app actions. It uses local AI through Ollama, routes intent with Qwen 3 0.6B, connects tools through Composio, and keeps privacy controls visible.
+## Hackathon Snapshot
 
-[View GitHub](https://github.com/somewherelostt/Invoke) · [See How It Works](#how-it-works)
+Invoke was built around one core idea:
+
+> Voice should not just write words. Voice should trigger outcomes.
+
+This project demonstrates:
+
+- **Natural speech to structured actions**: spoken requests become tool names, parameters, and executable workflows.
+- **Local-first AI routing**: Qwen 3 0.6B runs through Ollama for focused intent classification.
+- **Private speech pipeline**: Whisper-style transcription and local model routing keep the core workflow user-controlled.
+- **1000+ app potential through Composio**: one voice layer can route actions to Gmail, GitHub, Slack, Calendar, Notion, Todoist, Docs, search, and many more tools.
+- **Desktop + Android surfaces**: Tauri desktop app plus a Kotlin Android voice bubble concept.
 
 ---
 
@@ -21,10 +40,6 @@ We have all been there: you are writing a reply, filing a bug, capturing a thoug
 You open one app, type a prompt, copy the result, paste it somewhere else, clean the wording, then repeat the same context in another tool.
 
 Dictation apps only solve the first step. They turn voice into text, but they still leave the user to finish the work.
-
-Invoke was built around a different idea:
-
-> Voice should not just write words. Voice should trigger outcomes.
 
 Invoke acts like a command bar for your voice. You speak naturally, Invoke understands the intent, maps it into a structured action, and routes it to the right tool.
 
@@ -56,6 +71,8 @@ Voice input > Whisper > Qwen 3 0.6B > Composio action
 ---
 
 ## Use Cases
+
+![Invoke real life use cases](public/2.png)
 
 ### 1. Crowded Commute
 
@@ -178,6 +195,8 @@ Why this works:
 
 One voice layer for the tools you already use.
 
+**Invoke connects to 1000+ app actions through Composio.** Instead of hardcoding a few integrations, Invoke uses Composio as the action layer so spoken intent can reach the apps people already work in.
+
 | App | Example command |
 | --- | --- |
 | Gmail | "Draft an email to Alex about the project update." |
@@ -188,6 +207,10 @@ One voice layer for the tools you already use.
 | Todoist | "Add a follow-up task for Friday." |
 | Docs | "Turn this into a clean meeting summary." |
 | Web Search | "Find the best local AI models for Android." |
+
+The product direction is simple:
+
+> One voice command layer for 1000+ apps.
 
 ---
 
@@ -382,19 +405,6 @@ Use Google Play Console and signed desktop installers for broader public release
 
 Privacy mode keeps data stored only on your device. Local model setup routes intent classification through your own Ollama endpoint instead of a hosted model. Composio actions still require the permissions and integrations you explicitly connect.
 
-### Screenshots
-
-Add current product screenshots here before release:
-
-- Welcome / phone landing
-- Setup choice
-- Permissions
-- Voice bubble
-- Local model setup
-- Home
-
----
-
 ## Known Limitations
 
 - Very noisy environments can reduce transcription quality.
@@ -430,4 +440,3 @@ MIT
 **Invoke - Voice actions for every app**
 
 Local-first voice routing for desktop, Windows, and Android.
-using ao
