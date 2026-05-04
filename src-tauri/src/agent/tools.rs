@@ -15,8 +15,11 @@ impl ToolExecutor {
     pub fn new(composio_api_key: &str) -> Self {
         Self {
             composio_api_key: composio_api_key.to_string(),
-            client: reqwest::Client::new(),
-            base_url: "https://backend.composio.dev/api/v1".to_string(),
+            client: reqwest::Client::builder()
+                .no_proxy()
+                .build()
+                .expect("failed to build Composio HTTP client"),
+            base_url: "https://backend.composio.dev/api/v3.1".to_string(),
         }
     }
 
@@ -79,13 +82,11 @@ impl ToolExecutor {
         let action_name = self.map_tool_to_composio(&intent.tool);
         info!("🔧 Executing via Composio: {} → {}", intent.tool, action_name);
 
-        let url = format!("{}/actions/execute", self.base_url);
+        let url = format!("{}/tools/execute/{}", self.base_url, action_name);
         let params = self.normalize_params(intent);
 
         let body = serde_json::json!({
-            "actionName": action_name,
-            "params": params,
-            "entityId": "default"
+            "arguments": params
         });
 
         let response = self.client
@@ -107,7 +108,8 @@ impl ToolExecutor {
                         success: true,
                         simulated: false,
                         tool: intent.tool.clone(),
-                        message: format!("✅ {} executed successfully", intent.tool),
+                        message: extract_composio_message(&resp_body)
+                            .unwrap_or_else(|| format!("✅ {} executed successfully", intent.tool)),
                         data: resp_body,
                     })
                 } else {
@@ -133,10 +135,12 @@ impl ToolExecutor {
         match tool {
             "GMAIL_SEND_EMAIL" => "GMAIL_SEND_EMAIL",
             "GITHUB_CREATE_ISSUE" => "GITHUB_CREATE_AN_ISSUE",
+            "GITHUB_CREATE_AN_ISSUE" => "GITHUB_CREATE_AN_ISSUE",
             "SLACK_SEND_MESSAGE" => "SLACK_SEND_MESSAGE",
             "GOOGLECALENDAR_EVENTS_LIST" => "GOOGLECALENDAR_FIND_EVENTS",
             "NOTION_CREATE_PAGE" => "NOTION_CREATE_A_PAGE",
-            "WEB_SEARCH" => "WEB_SEARCH",
+            "WEB_SEARCH" => "COMPOSIO_SEARCH_WEB",
+            "COMPOSIO_SEARCH_WEB" => "COMPOSIO_SEARCH_WEB",
             _ => tool,
         }.to_string()
     }
@@ -148,9 +152,11 @@ impl ToolExecutor {
         if let Some(map) = params.as_object_mut() {
             match intent.tool.as_str() {
                 "GMAIL_SEND_EMAIL" => {
-                    if !map.contains_key("to") {
+                    if !map.contains_key("recipient_email") {
                         if let Some(recipient) = map.get("recipient").and_then(|v| v.as_str()) {
-                            map.insert("to".to_string(), Value::String(recipient.to_string()));
+                            map.insert("recipient_email".to_string(), Value::String(recipient.to_string()));
+                        } else if let Some(to) = map.get("to").and_then(|v| v.as_str()) {
+                            map.insert("recipient_email".to_string(), Value::String(to.to_string()));
                         }
                     }
                 }
@@ -164,10 +170,17 @@ impl ToolExecutor {
                         map.insert("text".to_string(), Value::String(msg.to_string()));
                     }
                 }
-                "GITHUB_CREATE_ISSUE" => {
+                "GITHUB_CREATE_ISSUE" | "GITHUB_CREATE_AN_ISSUE" => {
                     if !map.contains_key("body") {
                         if let Some(desc) = map.get("description").and_then(|v| v.as_str()) {
                             map.insert("body".to_string(), Value::String(desc.to_string()));
+                        }
+                    }
+                }
+                "WEB_SEARCH" | "COMPOSIO_SEARCH_WEB" => {
+                    if !map.contains_key("query") {
+                        if let Some(q) = map.get("text").and_then(|v| v.as_str()) {
+                            map.insert("query".to_string(), Value::String(q.to_string()));
                         }
                     }
                 }
@@ -177,6 +190,15 @@ impl ToolExecutor {
 
         params
     }
+}
+
+fn extract_composio_message(value: &Value) -> Option<String> {
+    let data = value.get("data")?;
+    data.get("answer")
+        .or_else(|| data.get("result"))
+        .or_else(|| data.get("text"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
 }
 
 /// Result from tool execution

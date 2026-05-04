@@ -83,7 +83,7 @@ That's a classification problem, not a generation problem. And tiny models are s
 | **STT** | Whisper tiny | 61M params | Speech-to-text, fully local |
 | **LLM** | Qwen 3 0.6B (Q4_K_M) | ~400MB | Intent classification + text polish |
 | **Actions** | Composio SDK | — | 1000+ app integrations |
-| **Android** | Kotlin + Compose | — | Mobile companion app |
+| **Android** | Kotlin + Material Views | — | Mobile companion app |
 | **Runtime** | llama.cpp / Ollama | — | Local model execution |
 
 ### Model Declaration
@@ -136,7 +136,76 @@ cd android
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-First launch → grant mic + accessibility → done. Connect Composio in settings (optional, one-time).
+First launch opens the polished INVOKE onboarding flow:
+
+1. Choose **Private local setup**, **Cloud sync setup**, or **Try without account**.
+2. Grant microphone and accessibility permissions.
+3. Tune the floating voice bubble.
+4. Configure Ollama only if you chose local setup.
+5. Sign in only if you chose cloud sync.
+6. Finish with Dictionary, Style, and Snippets personalization.
+
+Normal users do not need to enter Supabase project settings during onboarding. Developer backend configuration lives under **Advanced setup**.
+
+### Local Environment
+
+Copy `.env.example` to `.env` for machine-specific desktop settings. `.env` is ignored by git.
+
+```bash
+INVOKE_LLM_ENDPOINT=http://localhost:11434
+INVOKE_LLM_MODEL=qwen3:0.6b
+INVOKE_WHISPER_MODEL=tiny
+INVOKE_COMPOSIO_API_KEY=
+```
+
+Do not commit API keys, local network addresses, Supabase secrets, or user credentials. Android users enter local Ollama and advanced backend settings inside the app; desktop development can read them from `.env`.
+
+### Local Ollama Setup
+
+Run Ollama on your computer and keep your phone on the same Wi-Fi.
+
+```bash
+ollama pull qwen3:0.6b
+OLLAMA_HOST=0.0.0.0:11434 ollama serve
+```
+
+In the Android app, enter:
+
+```text
+Ollama endpoint: <computer-lan-ip>:11434
+Model: qwen3:0.6b
+```
+
+Use **Test connection** before continuing. The app validates blank endpoints, invalid host/port formats, failed network requests, and missing models.
+
+### Supabase Advanced Setup
+
+Cloud sync uses Supabase email/password auth. Do not commit project URLs, anon keys, service-role keys, or user credentials.
+
+For development:
+
+1. Create a Supabase project.
+2. Copy the project URL and anon public key.
+3. Open **Advanced setup** in the Android app.
+4. Paste the URL and anon key.
+5. Save, then sign in or create an account.
+
+Secrets are stored in Android app preferences for local testing. Use platform-secure storage before production release.
+
+### Privacy Mode
+
+Privacy mode keeps data stored only on your device. Local model setup routes intent classification through your own Ollama endpoint instead of a hosted model. Composio actions still require the permissions and integrations you explicitly connect.
+
+### Screenshots
+
+Add current product screenshots here before release:
+
+- Welcome / phone landing
+- Setup choice
+- Permissions
+- Voice bubble
+- Local model setup
+- Home
 
 ---
 
@@ -210,7 +279,6 @@ Our engineering solutions:
 | Composio (free tier) | $0 |
 | Electricity (laptop) | ~$0.01/session |
 | **Total per session** | **~$0.01** |
-| **Wispr Flow subscription** | **$144/year** |
 
 ---
 

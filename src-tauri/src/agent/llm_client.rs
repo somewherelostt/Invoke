@@ -43,13 +43,21 @@ impl LlmClient {
         Self {
             endpoint: endpoint.to_string(),
             model: model.to_string(),
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .no_proxy()
+                .build()
+                .expect("failed to build LLM HTTP client"),
         }
     }
 
     /// Classify user intent from transcribed text
     pub async fn classify_intent(&self, transcription: &str) -> Result<ClassifiedIntent> {
         info!("🧠 Classifying intent: {}", transcription);
+
+        if let Some(intent) = classify_rule_based(transcription) {
+            info!("🧠 Rule classified: tool={}, confidence={}", intent.tool, intent.confidence);
+            return Ok(intent);
+        }
 
         let url = format!("{}/api/chat", self.endpoint);
 
@@ -132,6 +140,55 @@ impl LlmClient {
         let chat_response: ChatResponse = response.json().await?;
         Ok(chat_response.message.content.trim().to_string())
     }
+}
+
+fn classify_rule_based(text: &str) -> Option<ClassifiedIntent> {
+    let normalized = text.to_lowercase();
+    let wants_search = [
+        "search the web",
+        "web search",
+        "search online",
+        "look up",
+        "google",
+        "find online",
+        "latest ",
+    ]
+    .iter()
+    .any(|needle| normalized.contains(needle));
+
+    if !wants_search {
+        return None;
+    }
+
+    let query = text
+        .trim()
+        .trim_start_matches(|c: char| c.is_whitespace())
+        .to_string();
+
+    let query = regex_strip_prefix(&query, &[
+        "search the web for ",
+        "web search ",
+        "search online for ",
+        "look up ",
+        "google ",
+        "find online ",
+    ]);
+
+    Some(ClassifiedIntent {
+        tool: "COMPOSIO_SEARCH_WEB".to_string(),
+        parameters: serde_json::json!({ "query": if query.is_empty() { text } else { &query } }),
+        confidence: 1.0,
+    })
+}
+
+fn regex_strip_prefix(text: &str, prefixes: &[&str]) -> String {
+    let lower = text.to_lowercase();
+    for prefix in prefixes {
+        if lower.starts_with(prefix) {
+            return text[prefix.len()..].trim().to_string();
+        }
+    }
+    text.trim().to_string()
 }
 
 /// Extract JSON from LLM output, handling:

@@ -39,6 +39,7 @@ class InvokeAccessibilityService : AccessibilityService() {
     private var pcmStream: ByteArrayOutputStream? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val agentClient = AgentClient()
+    private val sttEngine = SttEngine.getInstance()
 
     // ─── Lifecycle ───
 
@@ -54,8 +55,8 @@ class InvokeAccessibilityService : AccessibilityService() {
 
         // Load STT model in background
         scope.launch(Dispatchers.IO) {
-            if (!SttEngine.isReady()) {
-                val ok = SttEngine.init(this@InvokeAccessibilityService)
+            if (!sttEngine.isReady()) {
+                val ok = sttEngine.init(this@InvokeAccessibilityService)
                 Log.i(TAG, "STT engine init: $ok")
             }
         }
@@ -143,7 +144,7 @@ class InvokeAccessibilityService : AccessibilityService() {
                 // Step 1: Transcribe (Whisper / sherpa-onnx)
                 val samples = pcmToFloats(pcm)
                 val transcription = withContext(Dispatchers.IO) {
-                    SttEngine.transcribe(samples, SAMPLE_RATE)
+                    sttEngine.transcribe(samples, SAMPLE_RATE)
                 }
 
                 Log.i(TAG, "Transcription: \"$transcription\"")
@@ -322,7 +323,7 @@ class InvokeAccessibilityService : AccessibilityService() {
     /** Reload STT model (called from MainActivity after model download) */
     fun reloadSttModel() {
         scope.launch(Dispatchers.IO) {
-            SttEngine.init(this@InvokeAccessibilityService)
+            sttEngine.init(this@InvokeAccessibilityService)
         }
     }
 }
