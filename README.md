@@ -1,155 +1,275 @@
-<div align="center">
-
-# 🔮 INVOKE
-
-### Speak. Actions are invoked.
-
-*A voice-to-action agent powered by the weakest models you've ever seen.*
-
-[![Model Tier](https://img.shields.io/badge/Model-Tier%201%20(0.6B)-ff4444?style=for-the-badge)](#)
-[![Cost](https://img.shields.io/badge/Cost-%240-44cc44?style=for-the-badge)](#)
-[![Platform](https://img.shields.io/badge/Platform-Desktop%20%7C%20Android-blue?style=for-the-badge)](#)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](#)
-
-</div>
+# Invoke
 
 ---
 
-## ⚡ What is INVOKE?
+# The Voice Action Assistant For Every App
 
-INVOKE turns your voice into real actions across 1000+ apps — email, GitHub, Slack, calendar, and more — all powered by models so small they shouldn't work. But they do.
+Local-first voice routing for desktop, Windows, and Android.
 
-Works on **Desktop** (macOS/Windows/Linux) and **Android** — same account, same settings, same magic.
+Invoke turns natural speech into messages, notes, snippets, searches, and real app actions. It uses local AI through Ollama, routes intent with Qwen 3 0.6B, connects tools through Composio, and keeps privacy controls visible.
 
-You don't type. You don't click. You **invoke**.
-
-> *"Email Sarah: Hey, I'll be 10 minutes late"*
-> → Gmail sends the email.
-
-> *"Create a GitHub issue: login button broken on mobile"*
-> → Issue created, labeled, assigned.
-
-> *"What's on my calendar tomorrow?"*
-> → Reads your schedule back to you.
-
-All running on a **0.6 billion parameter model** on your laptop. Zero cloud. Zero cost.
+[View GitHub](https://github.com/somewherelostt/Invoke) · [See How It Works](#how-it-works)
 
 ---
 
-## 🧠 The Magic (How It Works)
+## The Why
 
-```
-┌──────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────┐
-│  🎙 Voice │───→│ Whisper tiny │───→│  Qwen 3 0.6B │───→│ Composio │
-│  (You)    │    │   (61M)      │    │  (classify)  │    │ (action) │
-└──────────┘    └──────────────┘    └──────────────┘    └──────────┘
-                                          │                     │
-                                    Intent JSON          Executes on
-                                    + parameters         1000+ apps
-                                          │                     │
-                                    ┌─────┴──────┐              │
-                                    │ Validation │              │
-                                    │ & Retry    │              │
-                                    └────────────┘              │
+We have all been there: you are writing a reply, filing a bug, capturing a thought, or searching for something urgent, and the workflow gets broken by app switching.
+
+You open one app, type a prompt, copy the result, paste it somewhere else, clean the wording, then repeat the same context in another tool.
+
+Dictation apps only solve the first step. They turn voice into text, but they still leave the user to finish the work.
+
+Invoke was built around a different idea:
+
+> Voice should not just write words. Voice should trigger outcomes.
+
+Invoke acts like a command bar for your voice. You speak naturally, Invoke understands the intent, maps it into a structured action, and routes it to the right tool.
+
+---
+
+## Product Snapshot
+
+```text
+local endpoint active
+Listening
+
+Natural speech to structured actions
+
+"Clean this sentence and make it sound professional."
+-> TEXT_CLEANUP
+-> ready
+
+"Create a GitHub issue for the login bug."
+-> GITHUB_CREATE_ISSUE
+-> queued
+
+"Search the web for Android privacy changes."
+-> COMPOSIO_SEARCH_WEB
+-> done
+
+Voice input > Whisper > Qwen 3 0.6B > Composio action
 ```
 
-### The Pipeline
+---
 
-1. **🎤 You speak** → Hold hotkey, say what you want
-2. **🔊 Whisper tiny (61M)** → Transcribes speech to text locally
-3. **🧠 Qwen 3 0.6B** → Classifies intent into structured JSON
-4. **✅ Validation layer** → Catches bad output, retries if needed
-5. **⚡ Composio** → Executes the action across 1000+ apps
-6. **📢 Response** → Result formatted and shown/spoken back
+## Use Cases
 
-### Why This Shouldn't Work (But Does)
+### 1. Crowded Commute
 
-The secret: **the model doesn't need to be smart. It needs to classify.**
+**Review a PR while standing in a packed train.**
 
-A 0.6B model can't write a good email. But it CAN output:
-```json
-{"tool": "GMAIL_SEND_EMAIL", "to": "Sarah", "body": "I'll be 10 minutes late"}
+You do not have a seat, your laptop is closed, and the train is loud. Open the Android mic bubble, use an earbud mic, and say what you want reviewed.
+
+```text
+"Review the auth PR, summarize the risky files, and draft one comment about token refresh."
 ```
 
-That's a classification problem, not a generation problem. And tiny models are surprisingly good at structured output when you engineer the constraints properly.
+Invoke transcribes the request, classifies the GitHub action, drafts the review note, and asks before posting.
+
+### 2. Shared Office
+
+**Whisper a polished reply without disturbing anyone.**
+
+You are in an open office or library and need to answer quickly. Speak quietly into a close mic and let Invoke clean the wording.
+
+```text
+"Reply to Sarah that I can join tomorrow, make it warm and professional."
+```
+
+Invoke drafts the message with your work style preset and keeps privacy mode local-first.
+
+### 3. Between Gates
+
+**Turn a passing thought into an organized workflow before it disappears.**
+
+You are walking through an airport with one hand free. Instead of opening Notion, Todoist, and Calendar, capture the whole workflow by voice.
+
+```text
+"Save this as a product idea, create a follow-up task for Friday, and search examples of Android voice bubbles."
+```
+
+Invoke routes each part to the right connected tool and shows a clear action summary.
 
 ---
 
-## 🛠️ Tech Stack
+## What It Does
 
-| Component | Technology | Size | Purpose |
-|-----------|-----------|------|---------|
-| **Frontend** | Tauri (Rust + React) | — | Cross-platform desktop app |
-| **STT** | Whisper tiny | 61M params | Speech-to-text, fully local |
-| **LLM** | Qwen 3 0.6B (Q4_K_M) | ~400MB | Intent classification + text polish |
-| **Actions** | Composio SDK | — | 1000+ app integrations |
-| **Android** | Kotlin + Material Views | — | Mobile companion app |
-| **Runtime** | llama.cpp / Ollama | — | Local model execution |
-
-### Model Declaration
-
-| Model | Params | Quant | Where | Cost |
-|-------|--------|-------|-------|------|
-| Whisper tiny | 61M | FP16 | Local (CPU/GPU) | $0 |
-| Qwen 3 0.6B Instruct | 0.6B | Q4_K_M | Local (CPU/GPU) | $0 |
-| **Total** | **0.66B** | — | **100% Local** | **$0** |
+- **Voice actions across apps**: turn spoken commands into messages, notes, snippets, searches, and tool actions.
+- **Local intent routing**: run Qwen 3 0.6B through Ollama for fast local classification.
+- **Composio tool execution**: connect spoken intent to Gmail, GitHub, Slack, Calendar, Notion, Todoist, Docs, and web search.
+- **Writing cleanup**: dictate rough thoughts and turn them into cleaner, more useful text.
+- **Snippets**: save reusable phrases, prompts, emails, and shortcuts.
+- **Dictionary**: teach Invoke names, project terms, emails, and phrases you use often.
+- **Style presets**: shape output for personal, work, email, or formal writing.
+- **Privacy mode**: keep local workflows on your device.
+- **Android voice bubble**: mobile voice entry point designed for quick capture from anywhere.
+- **Windows desktop app**: Tauri desktop app with local transcription, Ollama settings, and app actions.
 
 ---
 
-## 🚀 Quick Start
+## How It Works
+
+Invoke is intentionally built around a simple pipeline.
+
+```text
+Record -> Transcribe -> Classify -> Execute -> Confirm result
+```
+
+### 01. Record
+
+Invoke captures your voice from the Windows desktop app or Android voice bubble.
+
+### 02. Transcribe
+
+Whisper converts speech into text locally.
+
+### 03. Classify
+
+Qwen 3 0.6B maps the text into a structured action.
+
+### 04. Execute
+
+Composio or local tools complete the task.
+
+### 05. Confirm
+
+Risky actions can be reviewed before they are sent, posted, or saved.
+
+---
+
+## Local AI
+
+### Qwen 3 0.6B: small model, focused job
+
+Invoke does not use Qwen as a large chatbot. It uses Qwen 3 0.6B for one focused task: convert speech text into structured intent.
+
+That means the model does not need to write a long answer. It only needs to return a tool name and parameters.
+
+```text
+User:
+"Search the web for OpenAI official website"
+
+Qwen 3 0.6B:
+{
+  tool: "COMPOSIO_SEARCH_WEB",
+  parameters: {
+    query: "OpenAI official website"
+  }
+}
+
+Invoke:
+execute(action)
+```
+
+Why this works:
+
+- Small enough to run locally
+- Fast enough for intent routing
+- No cloud LLM required for core classification
+- Easier to validate than open-ended chat
+- Upgradeable later for larger local or hosted models
+
+---
+
+## Integrations
+
+One voice layer for the tools you already use.
+
+| App | Example command |
+| --- | --- |
+| Gmail | "Draft an email to Alex about the project update." |
+| Calendar | "What meetings do I have tomorrow?" |
+| GitHub | "Create an issue for the login button bug." |
+| Slack | "Tell the team I am joining late." |
+| Notion | "Create a note from this idea." |
+| Todoist | "Add a follow-up task for Friday." |
+| Docs | "Turn this into a clean meeting summary." |
+| Web Search | "Find the best local AI models for Android." |
+
+---
+
+## Desktop And Android
+
+### Windows Desktop App
+
+- Tauri desktop runtime
+- React interface
+- Local Whisper transcription server
+- Ollama endpoint settings
+- Qwen 3 0.6B model support
+- Composio action execution
+- Global shortcut support
+- Local environment configuration
+
+### Android App
+
+- Kotlin Android app
+- Floating mic bubble concept
+- Permission-first onboarding
+- Local model setup
+- Privacy mode
+- Dictionary, style, and snippets
+- Advanced setup for backend configuration
+- Optional account sync path
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| Desktop app | Tauri, Rust, React | Windows desktop voice assistant |
+| Android app | Kotlin, Material Views | Mobile voice bubble and onboarding |
+| Speech-to-text | Whisper tiny | Local transcription |
+| Local model | Qwen 3 0.6B through Ollama | Intent classification |
+| Tool execution | Composio | App and workflow actions |
+| Sync-ready backend | Supabase | Optional account and settings sync |
+
+---
+
+## Model Declaration
+
+| Model | Size | Where it runs | Role |
+| --- | --- | --- | --- |
+| Whisper tiny | 61M parameters | Local | Speech-to-text |
+| Qwen 3 0.6B | 0.6B parameters | Ollama / local endpoint | Intent routing |
+
+---
+
+## Privacy
+
+Invoke is designed around local-first control.
+
+- Core intent routing can run through your own Ollama endpoint.
+- Privacy mode keeps data stored on your device.
+- Cloud sync is optional.
+- App integrations are optional and user-controlled.
+- Secrets live in local environment files or app settings, not in source code.
+- `.env`, local properties, credentials, and build outputs are ignored by git.
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Python 3.10+
+
 - Node.js 18+
-- [Ollama](https://ollama.ai) or [llama.cpp](https://github.com/ggerganov/llama.cpp)
-- Composio API key (free tier)
+- Rust toolchain
+- Ollama
+- Python 3.10+ for the local Whisper server
+- Composio API key for connected app actions
 
-### Setup (Desktop)
+### Desktop Setup
 
 ```bash
-# Clone
-git clone https://github.com/somewherelostt/invoke.git
-cd invoke
-
-# Install dependencies
+git clone https://github.com/somewherelostt/Invoke.git
+cd Invoke
 npm install
-
-# Pull the model
 ollama pull qwen3:0.6b
-
-# Start everything
-./start.sh
 ```
 
-### Setup (Android)
-
-```bash
-cd android
-
-# Download sherpa-onnx AAR to app/libs/
-# from https://github.com/k2-fsa/sherpa-onnx/releases
-
-# Build APK
-./gradlew assembleDebug
-
-# Install
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
-
-First launch opens the polished INVOKE onboarding flow:
-
-1. Choose **Private local setup**, **Cloud sync setup**, or **Try without account**.
-2. Grant microphone and accessibility permissions.
-3. Tune the floating voice bubble.
-4. Configure Ollama only if you chose local setup.
-5. Sign in only if you chose cloud sync.
-6. Finish with Dictionary, Style, and Snippets personalization.
-
-Normal users do not need to enter Supabase project settings during onboarding. Developer backend configuration lives under **Advanced setup**.
-
-### Local Environment
-
-Copy `.env.example` to `.env` for machine-specific desktop settings. `.env` is ignored by git.
+Copy `.env.example` to `.env` and fill in local values:
 
 ```bash
 INVOKE_LLM_ENDPOINT=http://localhost:11434
@@ -158,9 +278,34 @@ INVOKE_WHISPER_MODEL=tiny
 INVOKE_COMPOSIO_API_KEY=
 ```
 
-Do not commit API keys, local network addresses, Supabase secrets, or user credentials. Android users enter local Ollama and advanced backend settings inside the app; desktop development can read them from `.env`.
+Run the desktop app:
 
-### Local Ollama Setup
+```bash
+npm run tauri -- dev
+```
+
+### Android Setup
+
+```bash
+cd android
+./gradlew assembleDebug
+adb install app/build/outputs/apk/debug/app-debug.apk
+```
+
+First launch opens the Invoke onboarding flow:
+
+1. Choose private local setup, cloud sync setup, or try without account.
+2. Grant microphone and accessibility permissions.
+3. Tune the floating voice bubble.
+4. Configure Ollama only if you chose local setup.
+5. Sign in only if you chose cloud sync.
+6. Finish with dictionary, style, and snippets personalization.
+
+Normal users do not need to enter backend project settings during onboarding. Developer backend configuration lives under Advanced setup.
+
+---
+
+## Local Ollama Setup
 
 Run Ollama on your computer and keep your phone on the same Wi-Fi.
 
@@ -176,9 +321,11 @@ Ollama endpoint: <computer-lan-ip>:11434
 Model: qwen3:0.6b
 ```
 
-Use **Test connection** before continuing. The app validates blank endpoints, invalid host/port formats, failed network requests, and missing models.
+Use Test connection before continuing. The app validates blank endpoints, invalid host and port formats, failed network requests, and missing models.
 
-### Supabase Advanced Setup
+---
+
+## Backend Advanced Setup
 
 Cloud sync uses Supabase email/password auth. Do not commit project URLs, anon keys, service-role keys, or user credentials.
 
@@ -186,186 +333,46 @@ For development:
 
 1. Create a Supabase project.
 2. Copy the project URL and anon public key.
-3. Open **Advanced setup** in the Android app.
+3. Open Advanced setup in the Android app.
 4. Paste the URL and anon key.
 5. Save, then sign in or create an account.
 
-Secrets are stored in Android app preferences for local testing. Use platform-secure storage before production release.
-
-### Privacy Mode
-
-Privacy mode keeps data stored only on your device. Local model setup routes intent classification through your own Ollama endpoint instead of a hosted model. Composio actions still require the permissions and integrations you explicitly connect.
-
-### Screenshots
-
-Add current product screenshots here before release:
-
-- Welcome / phone landing
-- Setup choice
-- Permissions
-- Voice bubble
-- Local model setup
-- Home
+Use platform-secure storage before production release.
 
 ---
 
-## 📱 Platforms
+## Known Limitations
 
-### Desktop (Primary)
-- macOS (Apple Silicon + Intel)
-- Windows
-- Linux
-- Global hotkey: `Alt+Space` to toggle recording
-- System tray icon, dark overlay UI
+- Very noisy environments can reduce transcription quality.
+- Small models can misclassify vague requests.
+- Multi-step actions need careful confirmation.
+- Some Composio actions require connected user accounts.
+- Long dictation may need a larger speech model for better accuracy.
+- Android voice bubble and sync flows are still evolving.
 
-### Android (Native Kotlin)
-- **Floating bubble** — appears in ANY app, draggable, edge-snaps
-- **Tap to record** → Whisper transcribes → Qwen classifies → action executes
-- **Text injection** — automatically types results into any text field
-- **One-time setup** — grant mic + accessibility, done forever
-- **Composio** — connect once, never asks again
-- **Works offline** — Whisper + Qwen run locally via sherpa-onnx + Ollama
-- Same account/settings synced across Desktop + Android
+---
 
-### Shared Architecture
-```
-┌──────────────────────────────────────┐
-│  Voice Input (mic)                   │
-│    ↓                                  │
-│  Whisper Tiny (61M) — local STT      │
-│    ↓                                  │
-│  Qwen 3 0.6B — intent classification │
-│    ↓                                  │
-│  Validation + confidence check       │
-│    ↓                                  │
-│  Composio — 1000+ app actions        │
-│    ↓                                  │
-│  Result (text inject / notification) │
-└──────────────────────────────────────┘
+## Project Structure
+
+```text
+Invoke/
+├── src/                 # React desktop UI
+├── src-tauri/           # Rust and Tauri desktop runtime
+├── android/             # Kotlin Android app
+├── scripts/             # Local helper scripts
+├── public/              # Static assets
+├── package.json         # Desktop dependencies and scripts
+└── README.md
 ```
 
-Both platforms share the same pipeline. Desktop uses Tauri (Rust), Android uses Kotlin. Same Ollama endpoint, same Composio key.
-
 ---
 
-## 🏗️ Engineering Around Model Weaknesses
-
-This is where the engineering matters. Qwen 3 0.6B will:
-- ❌ Hallucinate tool names
-- ❌ Forget parameters
-- ❌ Misunderstand complex requests
-- ❌ Output invalid JSON
-
-Our engineering solutions:
-
-| Problem | Solution |
-|---------|----------|
-| Hallucinated tools | Whitelist validation — only allow known Composio tools |
-| Missing parameters | Schema enforcement + retry with clarification prompt |
-| Complex multi-step requests | Task decomposer — break into sub-tasks the model can handle |
-| Invalid JSON output | Structured output enforcement with regex fallback |
-| Model uncertainty | Confidence scoring — if < threshold, ask user to clarify |
-| Context loss | RAG over conversation history + app-aware context |
-| Bad transcriptions | Phonetic correction dictionary + self-learning glossary |
-
----
-
-## 💰 Cost Breakdown
-
-| Item | Cost |
-|------|------|
-| Whisper tiny (local STT) | $0 |
-| Qwen 3 0.6B (local runtime) | $0 |
-| Composio (free tier) | $0 |
-| Electricity (laptop) | ~$0.01/session |
-| **Total per session** | **~$0.01** |
-
----
-
-## 📊 Performance
-
-| Metric | Value |
-|--------|-------|
-| Intent classification accuracy | ~92% |
-| End-to-end latency (local) | ~2-3 seconds |
-| STT latency | <500ms |
-| Model runtime | ~1-2 seconds |
-| Action execution | <1 second |
-| RAM usage | ~2GB |
-| Disk footprint | ~500MB (models + app) |
-
----
-
-## 🎯 What Invoke Can Do
-
-### Voice Commands → Real Actions
-
-| Say This | What Happens |
-|----------|-------------|
-| *"Email John: the deploy is done"* | Sends email via Gmail |
-| *"Create a GitHub issue: bug in auth"* | Opens issue in your repo |
-| *"Slack the team: standup in 5"* | Posts to Slack channel |
-| *"What's on my calendar today?"* | Reads your Google Calendar |
-| *"Add a task to Notion: review PR"* | Creates task in Notion |
-| *"Summarize my unread emails"* | Fetches + summarizes Gmail |
-| *"Search my Slack for: deploy timeline"* | Searches Slack history |
-| *"Create a Google Doc: meeting notes"* | Creates and opens doc |
-
----
-
-## 🐛 Known Failures (Honest Assessment)
-
-We believe in transparency:
-
-1. **Heavy accents** — Whisper tiny struggles with strong accents. Medium model would fix this but increases size 5x.
-2. **Multi-step requests** — *"Email John and then Slack Sarah and then..."* — the 0.6B model loses context after 2 actions. We decompose but it's not perfect.
-3. **Unusual app names** — If you say "send a message on Discord to...", the model sometimes picks Slack instead. Phonetic similarity confuses it.
-4. **Long dictation** — Anything over 30 seconds of speech starts degrading transcription quality.
-5. **Ambiguous intents** — *"Tell John about the project"* could be email, Slack, or SMS. We ask for clarification but sometimes guess wrong.
-
----
-
-## 🔒 Security
-
-- **Least-privilege tool scopes** — Composio only gets permissions you explicitly grant
-- **No raw shell/DB access** — Model output goes through validation, never executes directly
-- **Input sanitization** — All voice input is validated before tool execution
-- **Local-first** — Voice data never leaves your machine (only structured JSON goes to Composio)
-- **User confirmation** — Destructive actions (delete, send) require confirmation
-
----
-
-## 📁 Project Structure
-
-```
-invoke/
-├── src/
-│   ├── main/              # Electron/Tauri main process
-│   ├── renderer/          # React UI
-│   ├── voice/             # Audio capture + Whisper STT
-│   ├── llm/               # Qwen 3 0.6B runtime + prompts
-│   ├── actions/           # Composio integration + tool router
-│   ├── validation/        # Output validation + retry logic
-│   └── android/           # Kotlin/Compose companion app
-├── models/                # GGUF model files (gitignored)
-├── prompts/               # System prompts + few-shot examples
-├── tests/                 # Test suite
-├── docs/                  # Technical writeup + architecture
-└── scripts/               # Setup + build scripts
-```
-
-## 📜 License
+## License
 
 MIT
 
 ---
 
-<div align="center">
+**Invoke - Voice actions for every app**
 
-**Built with the weakest models. The strongest engineering.**
-
-*Invoke — where voice becomes action.*
-
-🔮
-
-</div>
+Local-first voice routing for desktop, Windows, and Android.
