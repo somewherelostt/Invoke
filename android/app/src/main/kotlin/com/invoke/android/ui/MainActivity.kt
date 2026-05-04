@@ -24,9 +24,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.invoke.android.BuildConfig
 import com.google.android.material.button.MaterialButton
 import com.invoke.android.agent.LocalModelClient
-import com.invoke.android.agent.SupabaseAuthClient
 import com.invoke.android.stt.SttEngine
 import com.invoke.android.ui.onboarding.BubbleOpacity
 import com.invoke.android.ui.onboarding.BubbleSize
@@ -40,6 +40,11 @@ import com.invoke.android.ui.theme.dp
 import com.invoke.android.ui.theme.headingStyle
 import com.invoke.android.ui.theme.rounded
 import com.invoke.android.ui.theme.titleStyle
+import io.privy.auth.LinkedAccount
+import io.privy.auth.PrivyUser
+import io.privy.logging.PrivyLogLevel
+import io.privy.sdk.Privy
+import io.privy.sdk.PrivyConfig
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -47,12 +52,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var scroll: ScrollView
     private lateinit var root: LinearLayout
 
-    private val authClient = SupabaseAuthClient()
     private val modelClient = LocalModelClient()
+    private var privy: Privy? = null
     private var localConnectionStatus = ConnectionStatus.IDLE
     private var localConnectionMessage = ""
     private var currentTab = HomeTab.HOME
     private var showSettings = false
+    private var authCodeSent = false
+    private var pendingAuthEmail = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +74,7 @@ class MainActivity : AppCompatActivity() {
         }
         scroll.addView(root)
         setContentView(scroll)
+        initializePrivy()
         render()
     }
 
@@ -242,23 +250,38 @@ class MainActivity : AppCompatActivity() {
 
     private fun accountScreen() {
         val email = input("Email", prefs.getString(KEY_AUTH_EMAIL, "").orEmpty())
-        val password = input("Password", password = true)
+        val code = input("One-time code")
         onboardingScaffold(
             stepIndex = 5,
             title = "Sync your setup",
-            subtitle = "Sign in to keep settings, snippets, dictionary, and style preferences available across devices.",
+            subtitle = "Sign in with email to keep settings, snippets, dictionary, and style preferences available across devices.",
             body = null,
-            primaryText = "Sign in",
-            primaryAction = { authenticate(false, email.text.toString(), password.text.toString()) },
-            secondaryText = "Continue without sync",
-            secondaryAction = { go(OnboardingStep.PERSONALIZATION) }
+            primaryText = if (authCodeSent) "Verify code" else "Send code",
+            primaryAction = {
+                if (authCodeSent) {
+                    verifyAuthCode(code.text.toString())
+                } else {
+                    sendAuthCode(email.text.toString())
+                }
+            },
+            secondaryText = if (authCodeSent) "Use different email" else "Continue without sync",
+            secondaryAction = {
+                if (authCodeSent) {
+                    authCodeSent = false
+                    pendingAuthEmail = ""
+                    render()
+                } else {
+                    go(OnboardingStep.PERSONALIZATION)
+                }
+            }
         ) {
-            textInputCard(email, "name@example.com")
-            textInputCard(password, "Your password")
-            rowButtons(
-                "Create account" to { authenticate(true, email.text.toString(), password.text.toString()) },
-                "Advanced setup" to { advancedBackendScreen() }
-            )
+            if (authCodeSent) {
+                infoCard("Check your email", "Enter the code sent to $pendingAuthEmail.", "No password needed")
+                textInputCard(code, "6-digit code")
+            } else {
+                textInputCard(email, "name@example.com")
+                root += secondaryButton("Advanced setup") { advancedBackendScreen() }
+            }
         }
     }
 
@@ -332,6 +355,9 @@ class MainActivity : AppCompatActivity() {
             addView(body(prefs.getString(KEY_AUTH_EMAIL, "Local user").orEmpty()))
             addView(statusLine("Plan", "Local beta", true))
             addView(statusLine("Privacy mode", if (privacyMode()) "On" else "Off", privacyMode()))
+            if (prefs.getString(KEY_AUTH_USER_ID, "").orEmpty().isNotBlank()) {
+                addView(secondaryButton("Sign out") { signOut() })
+            }
         }
         root += card {
             addView(sectionTitle("Settings"))
@@ -353,17 +379,17 @@ class MainActivity : AppCompatActivity() {
     private fun advancedBackendScreen() {
         root.removeAllViews()
         headerBar("Advanced setup")
-        val url = input("Supabase project URL", prefs.getString(KEY_SUPABASE_URL, "").orEmpty())
-        val anon = input("Supabase anon key", prefs.getString(KEY_SUPABASE_ANON, "").orEmpty(), password = true)
+        val url = input("Backend project URL", prefs.getString(KEY_BACKEND_URL, "").orEmpty())
+        val anon = input("Backend anon key", prefs.getString(KEY_BACKEND_ANON, "").orEmpty(), password = true)
         root += card {
             addView(sectionTitle("Backend configuration"))
-            addView(body("Most users do not need this. Add these values only for a custom Supabase project. Keys are stored locally and are not committed."))
+            addView(body("Most users do not need this. Add these values only for a custom sync backend. Keys are stored locally and are not committed."))
             addView(url)
             addView(anon)
             addView(primaryButton("Save backend settings") {
                 prefs.edit()
-                    .putString(KEY_SUPABASE_URL, url.text.toString().trim())
-                    .putString(KEY_SUPABASE_ANON, anon.text.toString().trim())
+                    .putString(KEY_BACKEND_URL, url.text.toString().trim())
+                    .putString(KEY_BACKEND_ANON, anon.text.toString().trim())
                     .apply()
                 toast("Backend settings saved")
                 render()
@@ -847,43 +873,105 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun authenticate(signUp: Boolean, email: String, password: String) {
+    private fun initializePrivy() {
+        if (BuildConfig.PRIVY_APP_ID.isBlank() || BuildConfig.PRIVY_APP_CLIENT_ID.isBlank()) {
+            return
+        }
+
+        privy = Privy.Companion.init(
+            applicationContext,
+            PrivyConfig(
+                appId = BuildConfig.PRIVY_APP_ID,
+                appClientId = BuildConfig.PRIVY_APP_CLIENT_ID,
+                logLevel = PrivyLogLevel.NONE
+            )
+        )
+    }
+
+    private fun sendAuthCode(email: String) {
         val cleanEmail = email.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
             toast("Enter a valid email")
             return
         }
-        if (password.isBlank()) {
-            toast("Enter your password")
-            return
-        }
 
-        val projectUrl = prefs.getString(KEY_SUPABASE_URL, "").orEmpty()
-        val anonKey = prefs.getString(KEY_SUPABASE_ANON, "").orEmpty()
-        if (projectUrl.isBlank() || anonKey.isBlank()) {
-            toast("Sync backend is not configured. Use Advanced setup or continue without sync.")
+        val auth = privy
+        if (auth == null) {
+            toast("Email sign-in is not configured yet.")
             return
         }
 
         lifecycleScope.launch {
-            toast(if (signUp) "Creating account..." else "Signing in...")
-            val result = if (signUp) {
-                authClient.signUp(projectUrl, anonKey, cleanEmail, password)
+            toast("Sending code...")
+            val result = auth.email.sendCode(cleanEmail)
+            if (result.isSuccess) {
+                pendingAuthEmail = cleanEmail
+                authCodeSent = true
+                prefs.edit().putString(KEY_AUTH_EMAIL, cleanEmail).apply()
+                toast("Code sent")
+                render()
             } else {
-                authClient.signIn(projectUrl, anonKey, cleanEmail, password)
-            }
-            if (result.success) {
-                prefs.edit()
-                    .putString(KEY_AUTH_TOKEN, result.accessToken.ifBlank { "pending" })
-                    .putString(KEY_AUTH_EMAIL, result.email.ifBlank { cleanEmail })
-                    .apply()
-                toast(result.message)
-                go(OnboardingStep.PERSONALIZATION)
-            } else {
-                toast(result.message)
+                toast(result.exceptionOrNull()?.message ?: "Could not send code")
             }
         }
     }
+
+    private fun verifyAuthCode(code: String) {
+        val cleanCode = code.trim()
+        if (cleanCode.isBlank()) {
+            toast("Enter the code")
+            return
+        }
+
+        val auth = privy
+        if (auth == null || pendingAuthEmail.isBlank()) {
+            toast("Start sign-in again")
+            authCodeSent = false
+            pendingAuthEmail = ""
+            render()
+            return
+        }
+
+        lifecycleScope.launch {
+            toast("Verifying...")
+            val result = auth.email.loginWithCode(pendingAuthEmail, cleanCode)
+            if (result.isSuccess) {
+                val user = result.getOrNull()
+                val accessToken = user?.getAccessToken()?.getOrNull().orEmpty()
+                prefs.edit()
+                    .putString(KEY_AUTH_USER_ID, user?.id.orEmpty())
+                    .putString(KEY_AUTH_TOKEN, accessToken)
+                    .putString(KEY_AUTH_EMAIL, user?.emailAddress().orEmpty().ifBlank { pendingAuthEmail })
+                    .apply()
+                authCodeSent = false
+                pendingAuthEmail = ""
+                toast("Signed in")
+                go(OnboardingStep.PERSONALIZATION)
+            } else {
+                toast(result.exceptionOrNull()?.message ?: "Invalid code")
+            }
+        }
+    }
+
+    private fun signOut() {
+        lifecycleScope.launch {
+            privy?.logout()
+            prefs.edit()
+                .remove(KEY_AUTH_USER_ID)
+                .remove(KEY_AUTH_TOKEN)
+                .remove(KEY_AUTH_EMAIL)
+                .apply()
+            toast("Signed out")
+            render()
+        }
+    }
+
+    private fun PrivyUser.emailAddress(): String =
+        linkedAccounts
+            .filterIsInstance<LinkedAccount.EmailAccount>()
+            .firstOrNull()
+            ?.emailAddress
+            .orEmpty()
 
     private fun saveSetup(type: SetupType) {
         prefs.edit().putString(KEY_SETUP_TYPE, type.name).apply()
@@ -964,10 +1052,11 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_PRIVACY_MODE = "privacy_mode"
         private const val KEY_OLLAMA_ENDPOINT = "ollama_endpoint"
         private const val KEY_OLLAMA_MODEL = "ollama_model"
-        private const val KEY_SUPABASE_URL = "supabase_url"
-        private const val KEY_SUPABASE_ANON = "supabase_anon_key"
-        private const val KEY_AUTH_TOKEN = "supabase_access_token"
-        private const val KEY_AUTH_EMAIL = "supabase_user_email"
+        private const val KEY_BACKEND_URL = "backend_url"
+        private const val KEY_BACKEND_ANON = "backend_anon_key"
+        private const val KEY_AUTH_USER_ID = "privy_user_id"
+        private const val KEY_AUTH_TOKEN = "privy_access_token"
+        private const val KEY_AUTH_EMAIL = "privy_user_email"
         private const val KEY_STYLE = "default_style"
     }
 }

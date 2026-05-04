@@ -269,7 +269,9 @@ npm install
 ollama pull qwen3:0.6b
 ```
 
-Copy `.env.example` to `.env` and fill in local values:
+### Local Environment
+
+Copy `.env.example` to `.env` for machine-specific desktop settings. `.env` is ignored by git.
 
 ```bash
 INVOKE_LLM_ENDPOINT=http://localhost:11434
@@ -277,6 +279,27 @@ INVOKE_LLM_MODEL=qwen3:0.6b
 INVOKE_WHISPER_MODEL=tiny
 INVOKE_COMPOSIO_API_KEY=
 ```
+
+Do not commit API keys, local network addresses, Privy credentials, Supabase secrets, or user credentials. Android users enter local Ollama and advanced backend settings inside the app; desktop development can read them from `.env`.
+
+### Privy Auth Setup
+
+Android cloud sync uses Privy for user-facing email code sign-in. Wallet login is not enabled in the app.
+
+For development:
+
+1. Create a Privy app at https://dashboard.privy.io.
+2. Enable email login.
+3. Copy the App ID and App client ID.
+4. Copy `android/local.properties.example` to `android/local.properties`.
+5. Fill in:
+
+```properties
+privy.app.id=your-privy-app-id
+privy.app.client.id=your-privy-app-client-id
+```
+
+`android/local.properties` is ignored by git. Do not put the Privy app secret in the Android app.
 
 Run the desktop app:
 
@@ -301,7 +324,7 @@ First launch opens the Invoke onboarding flow:
 5. Sign in only if you chose cloud sync.
 6. Finish with dictionary, style, and snippets personalization.
 
-Normal users do not need to enter backend project settings during onboarding. Developer backend configuration lives under Advanced setup.
+Normal users sign in with Privy email codes. Supabase remains a database/backend provider and its project settings live under Advanced setup for developers only.
 
 ---
 
@@ -327,7 +350,7 @@ Use Test connection before continuing. The app validates blank endpoints, invali
 
 ## Backend Advanced Setup
 
-Cloud sync uses Supabase email/password auth. Do not commit project URLs, anon keys, service-role keys, or user credentials.
+Supabase is used for database/backend storage only. User authentication is handled by Privy. Do not commit project URLs, anon keys, service-role keys, or user credentials.
 
 For development:
 
@@ -335,9 +358,38 @@ For development:
 2. Copy the project URL and anon public key.
 3. Open Advanced setup in the Android app.
 4. Paste the URL and anon key.
-5. Save, then sign in or create an account.
+5. Save backend settings. Sign-in still happens through Privy email codes.
 
-Use platform-secure storage before production release.
+Secrets are stored in Android app preferences for local testing. Use platform-secure storage before production release.
+
+### GitHub Releases Distribution
+
+For hackathon and beta distribution, publish builds through GitHub Releases:
+
+1. Build the Android APK and upload it as a release asset.
+2. Build the Tauri desktop installer and upload the installer for each target OS.
+3. Include this note in Android release descriptions:
+
+```text
+Android install note: this APK is distributed outside Google Play. You may need to allow "Install unknown apps" for your browser or file manager before installing.
+```
+
+Use Google Play Console and signed desktop installers for broader public release.
+
+### Privacy Mode
+
+Privacy mode keeps data stored only on your device. Local model setup routes intent classification through your own Ollama endpoint instead of a hosted model. Composio actions still require the permissions and integrations you explicitly connect.
+
+### Screenshots
+
+Add current product screenshots here before release:
+
+- Welcome / phone landing
+- Setup choice
+- Permissions
+- Voice bubble
+- Local model setup
+- Home
 
 ---
 
