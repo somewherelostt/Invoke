@@ -21,7 +21,7 @@
         "resizable": true,
         "transparent": false,
         "center": true,
-        "visible": false
+        "visible": true
       }
     ],
     "trayIcon": {
@@ -39,10 +39,5 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
-  },
-  "plugins": {
-    "global-shortcut": {
-      "shortcuts": ["Alt+Space"]
-    }
   }
 }
