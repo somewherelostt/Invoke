@@ -26,9 +26,13 @@ class InvokeAccessibilityService : AccessibilityService() {
 
     companion object {
         var instance: InvokeAccessibilityService? = null
-            private set
+        private set
         private const val TAG = "INVOKE"
         private const val SAMPLE_RATE = 16000
+        private const val MIN_RECORDING_MS = 650L
+        private const val MIN_PCM_BYTES = SAMPLE_RATE * 2 / 2
+        private const val MIN_RMS = 0.0035f
+        private const val MIN_PEAK = 0.025f
     }
 
     private enum class PipelineState { IDLE, RECORDING, TRANSCRIBING, CLASSIFYING, EXECUTING }
@@ -37,6 +41,7 @@ class InvokeAccessibilityService : AccessibilityService() {
     private var bubble: InvokeBubble? = null
     private var audioRecord: AudioRecord? = null
     private var pcmStream: ByteArrayOutputStream? = null
+    private var recordingStartedAtMs = 0L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val agentClient = AgentClient()
     private val sttEngine = SttEngine.getInstance()
@@ -100,9 +105,15 @@ class InvokeAccessibilityService : AccessibilityService() {
             return
         }
 
-        val bufSize = AudioRecord.getMinBufferSize(
+        val minBufSize = AudioRecord.getMinBufferSize(
             SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
+        if (minBufSize <= 0) {
+            Log.e(TAG, "Invalid AudioRecord min buffer size: $minBufSize")
+            toast("Could not start microphone")
+            return
+        }
+        val bufSize = maxOf(minBufSize, SAMPLE_RATE / 2)
         audioRecord = try {
             AudioRecord(
                 MediaRecorder.AudioSource.MIC, SAMPLE_RATE,
@@ -112,17 +123,47 @@ class InvokeAccessibilityService : AccessibilityService() {
             toast("Microphone permission denied"); return
         }
 
+        if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+            Log.e(TAG, "AudioRecord not initialized")
+            audioRecord?.release()
+            audioRecord = null
+            toast("Microphone is not available")
+            return
+        }
+
         pcmStream = ByteArrayOutputStream()
-        audioRecord!!.startRecording()
+        try {
+            audioRecord!!.startRecording()
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "startRecording failed", e)
+            audioRecord?.release()
+            audioRecord = null
+            toast("Could not start recording")
+            return
+        }
+        if (audioRecord?.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+            Log.e(TAG, "AudioRecord did not enter recording state")
+            audioRecord?.release()
+            audioRecord = null
+            toast("Microphone did not start")
+            return
+        }
+
+        recordingStartedAtMs = android.os.SystemClock.elapsedRealtime()
         pipelineState = PipelineState.RECORDING
         bubble?.setState(InvokeBubble.State.RECORDING)
+        bubble?.showFeedback("Listening. Tap again to stop.", 1800)
 
         // Read PCM on background thread
         scope.launch(Dispatchers.IO) {
             val buf = ByteArray(bufSize)
             while (pipelineState == PipelineState.RECORDING) {
                 val n = audioRecord?.read(buf, 0, buf.size) ?: break
-                if (n > 0) pcmStream?.write(buf, 0, n)
+                if (n > 0) {
+                    pcmStream?.write(buf, 0, n)
+                } else if (n < 0) {
+                    Log.w(TAG, "AudioRecord read returned $n")
+                }
             }
         }
     }
@@ -131,14 +172,20 @@ class InvokeAccessibilityService : AccessibilityService() {
         pipelineState = PipelineState.TRANSCRIBING
         bubble?.setState(InvokeBubble.State.PROCESSING)
 
-        audioRecord?.stop()
+        try {
+            audioRecord?.stop()
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "AudioRecord stop failed", e)
+        }
         audioRecord?.release()
         audioRecord = null
 
         val pcm = pcmStream?.toByteArray() ?: ByteArray(0)
         pcmStream = null
+        val elapsedMs = android.os.SystemClock.elapsedRealtime() - recordingStartedAtMs
 
-        if (pcm.isEmpty()) {
+        if (pcm.isEmpty() || pcm.size < MIN_PCM_BYTES || elapsedMs < MIN_RECORDING_MS) {
+            Log.i(TAG, "Recording too short/empty: bytes=${pcm.size}, elapsedMs=$elapsedMs")
             bubble?.showFeedback("No audio captured")
             resetToIdle(); return
         }
@@ -147,13 +194,20 @@ class InvokeAccessibilityService : AccessibilityService() {
             try {
                 // Step 1: Transcribe (Whisper / sherpa-onnx)
                 val samples = pcmToFloats(pcm)
+                val level = audioLevel(samples)
+                Log.i(TAG, "Audio level: rms=${level.rms}, peak=${level.peak}, samples=${samples.size}")
+                if (level.rms < MIN_RMS && level.peak < MIN_PEAK) {
+                    bubble?.showFeedback("No speech detected")
+                    resetToIdle(); return@launch
+                }
+
                 val transcription = withContext(Dispatchers.IO) {
                     sttEngine.transcribe(samples, SAMPLE_RATE)
-                }
+                }.cleanTranscript()
 
                 Log.i(TAG, "Transcription: \"$transcription\"")
 
-                if (transcription.isBlank()) {
+                if (transcription.isBlank() || isNoSpeechText(transcription)) {
                     bubble?.showFeedback("No speech detected")
                     resetToIdle(); return@launch
                 }
@@ -168,7 +222,7 @@ class InvokeAccessibilityService : AccessibilityService() {
                 Log.i(TAG, "Action result: success=${result.success} tool=${result.tool}")
 
                 // Step 3: Inject result or show feedback
-                if (result.isDictation && result.text.isNotBlank()) {
+                if (result.isDictation && result.text.isNotBlank() && !isNoSpeechText(result.text)) {
                     injectText(result.text)
                     bubble?.showFeedback("✓ Inserted", 1500)
                 } else if (result.success) {
@@ -202,6 +256,50 @@ class InvokeAccessibilityService : AccessibilityService() {
             samples[i] = ((hi shl 8) or lo).toShort().toFloat() / 32768f
         }
         return samples
+    }
+
+    private data class AudioLevel(val rms: Float, val peak: Float)
+
+    private fun audioLevel(samples: FloatArray): AudioLevel {
+        if (samples.isEmpty()) return AudioLevel(0f, 0f)
+        var sumSquares = 0.0
+        var peak = 0f
+        for (sample in samples) {
+            val abs = kotlin.math.abs(sample)
+            if (abs > peak) peak = abs
+            sumSquares += (sample * sample).toDouble()
+        }
+        val rms = kotlin.math.sqrt(sumSquares / samples.size).toFloat()
+        return AudioLevel(rms, peak)
+    }
+
+    private fun String.cleanTranscript(): String =
+        trim()
+            .trim('"', '\'', '.', ',', ' ', '\n', '\r', '\t')
+            .replace(Regex("\\s+"), " ")
+
+    private fun isNoSpeechText(text: String): Boolean {
+        val normalized = text
+            .lowercase()
+            .trim()
+            .trim('.', ',', '!', '?', '"', '\'', '(', ')', '[', ']', '{', '}')
+        return normalized.isBlank() || normalized in setOf(
+            "silence",
+            "silent",
+            "no speech",
+            "no audio",
+            "blank audio",
+            "inaudible",
+            "background noise",
+            "noise",
+            "music",
+            "uh",
+            "um",
+            "hmm",
+            "..."
+        ) || normalized.contains("<|nospeech|>") ||
+            normalized.contains("blank_audio") ||
+            normalized.contains("no_speech")
     }
 
     // ─── Text Injection (works in ANY app) ───
