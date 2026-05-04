@@ -1,0 +1,12 @@
+example-project/
+ui-craft-skill/
+node_modules/
+.next/
+out/
+dist/
+.env*
+!.env.example
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
