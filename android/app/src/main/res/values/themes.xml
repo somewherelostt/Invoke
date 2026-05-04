@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Invoke" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">#8B5CF6</item>
-        <item name="colorPrimaryVariant">#7C3AED</item>
+        <item name="colorPrimary">#4B294F</item>
+        <item name="colorPrimaryVariant">#321B35</item>
         <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorSecondary">#EF4444</item>
-        <item name="android:windowBackground">#0F0F0F</item>
-        <item name="android:statusBarColor">#0F0F0F</item>
-        <item name="android:navigationBarColor">#0F0F0F</item>
+        <item name="colorSecondary">#C78DD0</item>
+        <item name="android:windowBackground">#F5EAF7</item>
+        <item name="android:statusBarColor">#F5EAF7</item>
+        <item name="android:navigationBarColor">#F5EAF7</item>
     </style>
 </resources>

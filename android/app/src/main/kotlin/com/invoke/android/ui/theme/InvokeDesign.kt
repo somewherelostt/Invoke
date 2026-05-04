@@ -9,19 +9,22 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 object InvokeColor {
-    const val Background = 0xFF080A0E.toInt()
-    const val Surface = 0xFF101720.toInt()
-    const val SurfaceElevated = 0xFF17212E.toInt()
-    const val Input = 0xFF1F2A38.toInt()
-    const val Primary = 0xFF6D5BFF.toInt()
-    const val PrimarySoft = 0xFF332C72.toInt()
-    const val MicPurple = 0xFF8B5CF6.toInt()
-    const val TextPrimary = Color.WHITE
-    const val TextSecondary = 0xFFC6CFDA.toInt()
-    const val TextTertiary = 0xFF8994A3.toInt()
-    const val Border = 0xFF2C3746.toInt()
-    const val Success = 0xFF34D399.toInt()
-    const val Warning = 0xFFFFB020.toInt()
+    const val Background = 0xFFF5EAF7.toInt()
+    const val Surface = 0xFFFFF8FF.toInt()
+    const val SurfaceElevated = 0xFFF9F0FB.toInt()
+    const val Input = 0xFFF0E2F3.toInt()
+    const val Primary = 0xFF4B294F.toInt()
+    const val PrimaryDark = 0xFF321B35.toInt()
+    const val PrimaryLight = 0xFFC78DD0.toInt()
+    const val PrimarySoft = 0xFFE9D5EE.toInt()
+    const val Cyan = 0xFF6D8C91.toInt()
+    const val MicPurple = 0xFF4B294F.toInt()
+    const val TextPrimary = 0xFF351E38.toInt()
+    const val TextSecondary = 0xFF66516A.toInt()
+    const val TextTertiary = 0xFF8F7A93.toInt()
+    const val Border = 0xFFE6D3EA.toInt()
+    const val Success = 0xFF40745B.toInt()
+    const val Warning = 0xFF956A19.toInt()
     const val Danger = 0xFFFF5A6A.toInt()
 }
 

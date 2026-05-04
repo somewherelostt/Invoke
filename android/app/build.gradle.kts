@@ -20,7 +20,7 @@ fun localProperty(name: String): String {
 
 android {
     namespace = "com.invoke.android"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.invoke.android"

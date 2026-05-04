@@ -6,11 +6,13 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.text.InputType
 import android.text.method.PasswordTransformationMethod
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.accessibility.AccessibilityManager
@@ -60,17 +62,28 @@ class MainActivity : AppCompatActivity() {
     private var showSettings = false
     private var authCodeSent = false
     private var pendingAuthEmail = ""
+    private var returnHomeAfterAuth = false
+    private var accountScreenOpen = false
+    private var authStatusMessage = ""
+
+    private fun appBackground(): GradientDrawable =
+        GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(0xFFF7ECFA.toInt(), 0xFFF3D7F4.toInt(), 0xFFEFF2F8.toInt())
+        )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+        window.statusBarColor = InvokeColor.Background
+        window.navigationBarColor = InvokeColor.Background
         scroll = ScrollView(this).apply {
-            setBackgroundColor(InvokeColor.Background)
+            background = appBackground()
             isFillViewport = true
         }
         root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(20), dp(20), dp(28))
+            setPadding(dp(22), dp(22), dp(22), dp(28))
         }
         scroll.addView(root)
         setContentView(scroll)
@@ -87,22 +100,276 @@ class MainActivity : AppCompatActivity() {
         root.removeAllViews()
         hideKeyboard()
 
-        if (prefs.getBoolean(KEY_ONBOARDING_DONE, false)) {
+        if (accountScreenOpen) {
+            simpleAccountScreen()
+        } else if (prefs.getBoolean(KEY_ONBOARDING_DONE, false)) {
             home()
-            return
-        }
-
-        when (step()) {
-            OnboardingStep.WELCOME -> welcomeScreen()
-            OnboardingStep.CHOOSE_SETUP -> chooseSetupScreen()
-            OnboardingStep.PERMISSIONS -> permissionsScreen()
-            OnboardingStep.BUBBLE -> bubbleScreen()
-            OnboardingStep.LOCAL_MODEL -> localModelScreen()
-            OnboardingStep.ACCOUNT -> accountScreen()
-            OnboardingStep.PERSONALIZATION -> personalizationScreen()
-            OnboardingStep.HOME -> finishOnboarding()
+        } else {
+            setupScreen()
         }
     }
+
+    private fun setupScreen() {
+        root += brandHeader()
+        root += heroPanel()
+        root += suggestionGrid()
+        root += card {
+            addView(sectionTitle("Turn Invoke on"))
+            addView(setupRow("Microphone", "Required for voice capture", if (checkMicPermission()) "Allowed" else "Needed", checkMicPermission()) {
+                requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), REQ_MIC)
+            })
+            addView(divider())
+            addView(setupRow("Voice bubble", "Enable Invoke in Android Accessibility", if (isAccessibilityEnabled()) "On" else "Off", isAccessibilityEnabled()) {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            })
+            addView(divider())
+            addView(setupRow("Privacy mode", "Keep app data on this device", if (privacyMode()) "On" else "Off", privacyMode()) {
+                prefs.edit().putBoolean(KEY_PRIVACY_MODE, !privacyMode()).apply()
+                render()
+            })
+        }
+        root += voiceInputDock("Tap here to start a voice action", "Start using Invoke") { finishOnboarding() }
+        root += secondaryButton("Connect local Ollama") {
+            root.removeAllViews()
+            localModelScreen()
+        }
+        root += secondaryButton("Sign in with email") { openAccountFromHome() }
+    }
+
+    private fun brandHeader(): View =
+        row {
+            addView(glyphBadge("✦", 34).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(34), dp(34)).apply { setMargins(0, 0, dp(10), 0) }
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "Invoke"
+                setTextColor(InvokeColor.TextPrimary)
+                typeface = Typeface.create(Typeface.SERIF, Typeface.NORMAL)
+                textSize = 18f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(statusPillView("local-first", true))
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, dp(20)) }
+        }
+
+    private fun heroPanel(): View =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            minimumHeight = dp(340)
+            setPadding(dp(10), dp(28), dp(10), dp(18))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0x00FFFFFF, 0x44DDB8E8)
+            ).apply {
+                cornerRadius = dp(34).toFloat()
+            }
+            matchCard()
+            addView(TextView(this@MainActivity).apply {
+                text = "Hi there,"
+                setTextColor(InvokeColor.TextPrimary)
+                typeface = Typeface.create(Typeface.SERIF, Typeface.NORMAL)
+                textSize = 42f
+                includeFontPadding = false
+                setLineSpacing(0f, 0.94f)
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "Ask Invoke to write, search, summarize, or act across your Android apps."
+                setTextColor(InvokeColor.TextSecondary)
+                textSize = 16f
+                setLineSpacing(5f, 1.05f)
+                setPadding(0, dp(10), dp(16), dp(20))
+            })
+            addView(spacer(92))
+            addView(commandConsole())
+        }
+
+    private fun commandConsole(): View =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(14))
+            background = rounded(0xDFFFFFFF.toInt(), dp(24), 0x66FFFFFF, dp(1))
+            addView(row {
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(TextView(this@MainActivity).apply {
+                        text = "Listening"
+                        setTextColor(InvokeColor.TextTertiary)
+                        textSize = 12f
+                    })
+                    addView(TextView(this@MainActivity).apply {
+                        text = "Natural speech to structured actions"
+                        setTextColor(InvokeColor.TextPrimary)
+                        textSize = 15f
+                        typeface = Typeface.DEFAULT_BOLD
+                    })
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                })
+                addView(micCircle(44, 1f).apply {
+                    layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
+                })
+            })
+            addView(waveform())
+            addView(commandLine("\"Rewrite this message in a calm work tone.\"", "TEXT_CLEANUP", "ready"))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+    private fun waveform(): View =
+        row {
+            val heights = listOf(16, 26, 34, 22, 42, 30, 18, 36, 28, 46, 24, 32)
+            heights.forEach { height ->
+                addView(View(this@MainActivity).apply {
+                    background = rounded(0x884B294F.toInt(), dp(999))
+                    layoutParams = LinearLayout.LayoutParams(dp(5), dp(height)).apply {
+                        setMargins(dp(3), dp(18), dp(3), dp(18))
+                    }
+                })
+            }
+        }
+
+    private fun commandLine(speech: String, tool: String, status: String): View =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = rounded(0xAAFFFFFF.toInt(), dp(16), 0x99FFFFFF.toInt(), dp(1))
+            addView(TextView(this@MainActivity).apply {
+                text = speech
+                setTextColor(InvokeColor.TextPrimary)
+                textSize = 13f
+            })
+            addView(row {
+                addView(TextView(this@MainActivity).apply {
+                    text = tool
+                    setTextColor(InvokeColor.Cyan)
+                    typeface = Typeface.MONOSPACE
+                    textSize = 11f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                })
+                addView(statusPillView(status, true))
+            }.apply { setPadding(0, dp(8), 0, 0) })
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, dp(10)) }
+        }
+
+    private fun routeStrip(): View =
+        TextView(this).apply {
+            text = "Voice input > Whisper > Qwen 3 0.6B > Composio action"
+            setTextColor(InvokeColor.TextSecondary)
+            typeface = Typeface.MONOSPACE
+            textSize = 11f
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = rounded(0x80FFFFFF.toInt(), dp(16))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(12), 0, 0) }
+        }
+
+    private fun suggestionGrid(): View =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            listOf(
+                listOf(
+                    Triple("◎", "Clean up text", "Rewrite a selected message"),
+                    Triple("◇", "Search faster", "Ask across apps")
+                ),
+                listOf(
+                    Triple("≋", "Save snippets", "Reuse common phrases"),
+                    Triple("✳", "Local AI", "Keep work on device")
+                )
+            ).forEach { rowItems ->
+                addView(row {
+                    rowItems.forEachIndexed { index, item ->
+                        addView(suggestionTile(item.first, item.second, item.third).apply {
+                            layoutParams = LinearLayout.LayoutParams(0, dp(138), 1f).apply {
+                                setMargins(
+                                    if (index == 0) 0 else dp(4),
+                                    0,
+                                    if (index == 0) dp(4) else 0,
+                                    dp(8)
+                                )
+                            }
+                        })
+                    }
+                })
+            }
+            matchCard()
+        }
+
+    private fun suggestionTile(mark: String, title: String, subtitle: String): View =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            background = rounded(0xAAFFFFFF.toInt(), dp(12), 0x88FFFFFF.toInt(), dp(1))
+            addView(TextView(this@MainActivity).apply {
+                text = mark
+                setTextColor(InvokeColor.Primary)
+                textSize = 24f
+                includeFontPadding = false
+            })
+            addView(spacer(20))
+            addView(TextView(this@MainActivity).apply {
+                text = title
+                setTextColor(InvokeColor.TextPrimary)
+                textSize = 15f
+                typeface = Typeface.DEFAULT_BOLD
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = subtitle
+                setTextColor(InvokeColor.TextTertiary)
+                textSize = 12f
+                setLineSpacing(2f, 1.05f)
+            })
+        }
+
+    private fun voiceInputDock(hint: String, actionLabel: String, action: () -> Unit): View =
+        row {
+            setPadding(dp(18), dp(10), dp(10), dp(10))
+            background = rounded(0xEEFFF9FF.toInt(), dp(999), 0x99FFFFFF.toInt(), dp(1))
+            addView(TextView(this@MainActivity).apply {
+                text = hint
+                setTextColor(InvokeColor.TextSecondary)
+                textSize = 15f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(MaterialButton(this@MainActivity).apply {
+                text = "●"
+                contentDescription = actionLabel
+                isAllCaps = false
+                textSize = 22f
+                minWidth = dp(52)
+                minHeight = dp(52)
+                cornerRadius = dp(999)
+                setTextColor(Color.WHITE)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(InvokeColor.Primary)
+                setOnClickListener { action() }
+                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
+            })
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, dp(4), 0, dp(12)) }
+        }
+
+    private fun glyphBadge(mark: String, sizeDp: Int): TextView =
+        TextView(this).apply {
+            text = mark
+            gravity = Gravity.CENTER
+            setTextColor(InvokeColor.Primary)
+            textSize = 18f
+            background = rounded(0x80FFFFFF.toInt(), dp(999), 0x99FFFFFF.toInt(), dp(1))
+            minWidth = dp(sizeDp)
+            minHeight = dp(sizeDp)
+        }
 
     private fun welcomeScreen() {
         onboardingScaffold(
@@ -271,7 +538,12 @@ class MainActivity : AppCompatActivity() {
                     pendingAuthEmail = ""
                     render()
                 } else {
-                    go(OnboardingStep.PERSONALIZATION)
+                    if (returnHomeAfterAuth || prefs.getBoolean(KEY_ONBOARDING_DONE, false)) {
+                        returnHomeAfterAuth = false
+                        render()
+                    } else {
+                        go(OnboardingStep.PERSONALIZATION)
+                    }
                 }
             }
         ) {
@@ -312,19 +584,21 @@ class MainActivity : AppCompatActivity() {
 
         when (currentTab) {
             HomeTab.HOME -> homeTab()
-            HomeTab.DICTIONARY -> libraryTab("Dictionary", "No dictionary entries yet", "Add names, project terms, and phrases Invoke should understand.")
+            HomeTab.DICTIONARY -> libraryTab("Dictionary", "No custom words yet", "Add names, project terms, and phrases Invoke should preserve.")
             HomeTab.STYLE -> styleTab()
-            HomeTab.SNIPPETS -> libraryTab("Snippets", "No snippets yet", "Save reusable prompts and text shortcuts for common work.")
+            HomeTab.SNIPPETS -> libraryTab("Snippets", "No snippets yet", "Save reusable phrases and short commands.")
         }
         bottomNav()
     }
 
     private fun homeTab() {
-        root += card {
-            addView(sectionTitle("Recent voice actions"))
-            addView(emptyState("No voice actions yet", "Tap the mic to create your first one."))
+        root += heroPanel()
+        root += suggestionGrid()
+        root += voiceInputDock("Tap here to start a dialog", "Turn on voice bubble") {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        root += micButtonLarge()
+        root += activationCard()
+        root += accountPrivacyCard()
     }
 
     private fun styleTab() {
@@ -355,6 +629,9 @@ class MainActivity : AppCompatActivity() {
             addView(body(prefs.getString(KEY_AUTH_EMAIL, "Local user").orEmpty()))
             addView(statusLine("Plan", "Local beta", true))
             addView(statusLine("Privacy mode", if (privacyMode()) "On" else "Off", privacyMode()))
+            if (prefs.getString(KEY_AUTH_USER_ID, "").orEmpty().isBlank()) {
+                addView(primaryButton("Sign in with email") { openAccountFromHome() })
+            }
             if (prefs.getString(KEY_AUTH_USER_ID, "").orEmpty().isNotBlank()) {
                 addView(secondaryButton("Sign out") { signOut() })
             }
@@ -373,6 +650,91 @@ class MainActivity : AppCompatActivity() {
         root += primaryButton("Back to app") {
             showSettings = false
             render()
+        }
+    }
+
+    private fun activationCard(): View =
+        card {
+            val enabled = isAccessibilityEnabled()
+            addView(sectionTitle("Voice bubble"))
+            addView(body(if (enabled) {
+                "Invoke is on. Use the floating mic bubble from any app."
+            } else {
+                "Turn on the accessibility service to show the floating mic bubble and use Invoke in other apps."
+            }))
+            addView(statusLine("Status", if (enabled) "On" else "Off", enabled))
+            addView(primaryButton(if (enabled) "Open Android settings" else "Turn on Invoke") {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            })
+        }
+
+    private fun accountPrivacyCard(): View =
+        card {
+            val signedIn = prefs.getString(KEY_AUTH_USER_ID, "").orEmpty().isNotBlank()
+            addView(sectionTitle("Privacy and account"))
+            addView(statusLine("Privacy mode", if (privacyMode()) "On" else "Off", privacyMode()))
+            addView(statusLine("Account", if (signedIn) "Signed in" else "Local", signedIn))
+            if (signedIn) {
+                addView(body(prefs.getString(KEY_AUTH_EMAIL, "").orEmpty()))
+            } else {
+                addView(primaryButton("Sign in with email") { openAccountFromHome() })
+            }
+            addView(secondaryButton("Privacy settings") {
+                showSettings = true
+                render()
+            })
+        }
+
+    private fun openAccountFromHome() {
+        returnHomeAfterAuth = true
+        accountScreenOpen = true
+        authStatusMessage = ""
+        render()
+    }
+
+    private fun simpleAccountScreen() {
+        val email = input("Email", prefs.getString(KEY_AUTH_EMAIL, "").orEmpty())
+        val code = input("One-time code")
+        root.removeAllViews()
+        root += row {
+            addView(TextView(this@MainActivity).apply {
+                text = "Account"
+                headingStyle()
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(secondaryButton("Close") {
+                accountScreenOpen = false
+                authCodeSent = false
+                pendingAuthEmail = ""
+                render()
+            }.apply {
+                layoutParams = LinearLayout.LayoutParams(dp(96), LinearLayout.LayoutParams.WRAP_CONTENT)
+            })
+        }
+        root += card {
+            addView(sectionTitle("Email sign-in"))
+            addView(body("Optional sync for settings, snippets, dictionary, and style preferences. Local mode works without an account."))
+            if (authStatusMessage.isNotBlank()) {
+                addView(infoCardView("Status", authStatusMessage))
+            }
+            if (authCodeSent) {
+                addView(infoCardView("Code sent", "Enter the code sent to $pendingAuthEmail."))
+                addView(code)
+                addView(primaryButton("Verify code") { verifyAuthCode(code.text.toString()) })
+                addView(secondaryButton("Use different email") {
+                    authCodeSent = false
+                    pendingAuthEmail = ""
+                    render()
+                })
+            } else {
+                addView(email)
+                addView(primaryButton("Send code") { sendAuthCode(email.text.toString()) })
+                addView(secondaryButton("Continue locally") {
+                    returnHomeAfterAuth = false
+                    accountScreenOpen = false
+                    render()
+                })
+            }
         }
     }
 
@@ -490,13 +852,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun micCircle(sizeDp: Int, opacity: Float): TextView =
         TextView(this).apply {
-            text = "mic"
+            text = "●"
             gravity = Gravity.CENTER
-            textSize = 16f
+            textSize = (sizeDp * 0.34f)
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
             alpha = opacity
-            background = rounded(InvokeColor.MicPurple, dp(999))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(InvokeColor.PrimaryLight, InvokeColor.MicPurple)
+            ).apply { cornerRadius = dp(999).toFloat() }
             minWidth = dp(sizeDp)
             minHeight = dp(sizeDp)
         }
@@ -551,6 +916,29 @@ class MainActivity : AppCompatActivity() {
             addView(statusPillView(examples, true))
         }
     }
+
+    private fun infoCardView(title: String, description: String): View =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            background = rounded(InvokeColor.Input, dp(18), InvokeColor.Border, dp(1))
+            addView(TextView(this@MainActivity).apply {
+                text = title
+                setTextColor(InvokeColor.TextPrimary)
+                typeface = Typeface.DEFAULT_BOLD
+                textSize = 14f
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = description
+                setTextColor(InvokeColor.TextSecondary)
+                textSize = 13f
+                setPadding(0, dp(4), 0, 0)
+            })
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, dp(12)) }
+        }
 
     private fun styleSample() {
         root += card {
@@ -611,7 +999,7 @@ class MainActivity : AppCompatActivity() {
                     textSize = 13f
                     minHeight = dp(48)
                     cornerRadius = dp(18)
-                    setTextColor(Color.WHITE)
+                    setTextColor(if (option == selected) Color.WHITE else InvokeColor.TextPrimary)
                     backgroundTintList = android.content.res.ColorStateList.valueOf(
                         if (option == selected) InvokeColor.Primary else InvokeColor.Input
                     )
@@ -626,9 +1014,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun headerBar(title: String = "INVOKE") {
         root += row {
+            addView(glyphBadge("✦", 32).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply { setMargins(0, 0, dp(10), 0) }
+            })
             addView(TextView(this@MainActivity).apply {
-                text = title
+                text = if (title == "INVOKE") "Invoke" else title
                 headingStyle()
+                typeface = Typeface.create(Typeface.SERIF, Typeface.NORMAL)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
             addView(secondaryButton(if (showSettings) "Close" else "Menu") {
@@ -649,9 +1041,9 @@ class MainActivity : AppCompatActivity() {
                     textSize = 12f
                     minHeight = dp(50)
                     cornerRadius = dp(18)
-                    setTextColor(Color.WHITE)
+                    setTextColor(if (currentTab == tab) Color.WHITE else InvokeColor.TextPrimary)
                     backgroundTintList = android.content.res.ColorStateList.valueOf(
-                        if (currentTab == tab) InvokeColor.Primary else InvokeColor.Surface
+                        if (currentTab == tab) InvokeColor.Primary else 0x99FFFFFF.toInt()
                     )
                     setOnClickListener {
                         currentTab = tab
@@ -669,7 +1061,7 @@ class MainActivity : AppCompatActivity() {
         LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(16), dp(18), dp(18))
-            background = rounded(InvokeColor.Surface, dp(24), InvokeColor.Border, dp(1))
+            background = rounded(0xCCFFFFFF.toInt(), dp(24), 0x99FFFFFF.toInt(), dp(1))
             matchCard()
             content()
         }
@@ -736,7 +1128,7 @@ class MainActivity : AppCompatActivity() {
             textSize = 15f
             minHeight = dp(54)
             cornerRadius = dp(22)
-            setTextColor(Color.WHITE)
+            setTextColor(if (color == InvokeColor.Input) InvokeColor.TextPrimary else Color.WHITE)
             backgroundTintList = android.content.res.ColorStateList.valueOf(color)
             setOnClickListener { action() }
             layoutParams = LinearLayout.LayoutParams(
@@ -772,7 +1164,7 @@ class MainActivity : AppCompatActivity() {
             setTextColor(if (ok) InvokeColor.Success else InvokeColor.Warning)
             gravity = Gravity.CENTER
             setPadding(dp(12), dp(6), dp(12), dp(6))
-            background = rounded(if (ok) 0xFF143D31.toInt() else 0xFF3D2E14.toInt(), dp(999))
+            background = rounded(if (ok) 0xFFEAF6EF.toInt() else 0xFFFFF0D8.toInt(), dp(999))
         }
 
     private fun emptyState(title: String, description: String): View =
@@ -803,6 +1195,49 @@ class MainActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
             addView(statusPillView(value, ok))
+        }
+
+    private fun setupRow(title: String, description: String, status: String, ok: Boolean, action: () -> Unit): View =
+        row {
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(this@MainActivity).apply {
+                    text = title
+                    setTextColor(InvokeColor.TextPrimary)
+                    typeface = Typeface.DEFAULT_BOLD
+                    textSize = 16f
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = description
+                    setTextColor(InvokeColor.TextTertiary)
+                    textSize = 13f
+                    setPadding(0, dp(4), 0, 0)
+                })
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(MaterialButton(this@MainActivity).apply {
+                text = status
+                isAllCaps = false
+                textSize = 12f
+                minHeight = dp(42)
+                cornerRadius = dp(16)
+                setTextColor(Color.WHITE)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    if (ok) InvokeColor.Input else InvokeColor.Primary
+                )
+                setTextColor(if (ok) InvokeColor.TextPrimary else Color.WHITE)
+                setOnClickListener { action() }
+                layoutParams = LinearLayout.LayoutParams(dp(96), LinearLayout.LayoutParams.WRAP_CONTENT)
+            })
+        }
+
+    private fun divider(): View =
+        View(this).apply {
+            setBackgroundColor(InvokeColor.Border)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(1)
+            ).apply { setMargins(0, dp(14), 0, dp(14)) }
         }
 
     private fun settingsRow(label: String, value: String): View =
@@ -891,27 +1326,40 @@ class MainActivity : AppCompatActivity() {
     private fun sendAuthCode(email: String) {
         val cleanEmail = email.trim()
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
-            toast("Enter a valid email")
+            authStatusMessage = "Enter a valid email address."
+            render()
             return
         }
 
         val auth = privy
         if (auth == null) {
-            toast("Email sign-in is not configured yet.")
+            authStatusMessage = "Email sign-in is not configured in this build."
+            render()
             return
         }
 
         lifecycleScope.launch {
-            toast("Sending code...")
-            val result = auth.email.sendCode(cleanEmail)
-            if (result.isSuccess) {
+            authStatusMessage = "Sending code..."
+            render()
+            val result = runCatching { auth.email.sendCode(cleanEmail) }
+            val sendResult = result.getOrNull()
+            if (result.isFailure) {
+                val error = result.exceptionOrNull()
+                Log.e(TAG, "Privy sendCode threw", error)
+                authStatusMessage = error?.message ?: "Could not send code."
+                render()
+            } else if (sendResult?.isSuccess == true) {
                 pendingAuthEmail = cleanEmail
                 authCodeSent = true
+                accountScreenOpen = true
                 prefs.edit().putString(KEY_AUTH_EMAIL, cleanEmail).apply()
-                toast("Code sent")
+                authStatusMessage = "Code sent. Check your email."
                 render()
             } else {
-                toast(result.exceptionOrNull()?.message ?: "Could not send code")
+                val error = sendResult?.exceptionOrNull()
+                Log.e(TAG, "Privy sendCode failed", error)
+                authStatusMessage = error?.message ?: "Could not send code. Check Privy email login settings."
+                render()
             }
         }
     }
@@ -933,10 +1381,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            toast("Verifying...")
-            val result = auth.email.loginWithCode(pendingAuthEmail, cleanCode)
-            if (result.isSuccess) {
-                val user = result.getOrNull()
+            authStatusMessage = "Verifying code..."
+            render()
+            val result = runCatching { auth.email.loginWithCode(pendingAuthEmail, cleanCode) }
+            val loginResult = result.getOrNull()
+            if (result.isFailure) {
+                val error = result.exceptionOrNull()
+                Log.e(TAG, "Privy loginWithCode threw", error)
+                authStatusMessage = error?.message ?: "Could not verify code."
+                render()
+            } else if (loginResult?.isSuccess == true) {
+                val user = loginResult.getOrNull()
                 val accessToken = user?.getAccessToken()?.getOrNull().orEmpty()
                 prefs.edit()
                     .putString(KEY_AUTH_USER_ID, user?.id.orEmpty())
@@ -945,10 +1400,19 @@ class MainActivity : AppCompatActivity() {
                     .apply()
                 authCodeSent = false
                 pendingAuthEmail = ""
-                toast("Signed in")
-                go(OnboardingStep.PERSONALIZATION)
+                accountScreenOpen = false
+                authStatusMessage = ""
+                if (returnHomeAfterAuth || prefs.getBoolean(KEY_ONBOARDING_DONE, false)) {
+                    returnHomeAfterAuth = false
+                    render()
+                } else {
+                    go(OnboardingStep.PERSONALIZATION)
+                }
             } else {
-                toast(result.exceptionOrNull()?.message ?: "Invalid code")
+                val error = loginResult?.exceptionOrNull()
+                Log.e(TAG, "Privy loginWithCode failed", error)
+                authStatusMessage = error?.message ?: "Invalid code."
+                render()
             }
         }
     }
@@ -1058,5 +1522,6 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_AUTH_TOKEN = "privy_access_token"
         private const val KEY_AUTH_EMAIL = "privy_user_email"
         private const val KEY_STYLE = "default_style"
+        private const val TAG = "InvokeAuth"
     }
 }
