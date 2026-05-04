@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.SharedPreferences
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -214,9 +215,17 @@ class InvokeAccessibilityService : AccessibilityService() {
 
                 bubble?.showFeedback(transcription, 3000)
 
-                // Step 2: Classify + Execute (Qwen → Composio)
-                pipelineState = PipelineState.CLASSIFYING
                 val prefs = getSharedPreferences("invoke_prefs", MODE_PRIVATE)
+                if (shouldFastPaste(transcription, prefs)) {
+                    injectText(transcription)
+                    bubble?.showFeedback("Inserted", 1200)
+                    bubble?.setState(InvokeBubble.State.DONE)
+                    resetToIdle()
+                    return@launch
+                }
+
+                // Step 2: Classify + Execute (Qwen -> Composio)
+                pipelineState = PipelineState.CLASSIFYING
                 val result = agentClient.classifyAndExecute(transcription, prefs)
 
                 Log.i(TAG, "Action result: success=${result.success} tool=${result.tool}")
@@ -224,11 +233,11 @@ class InvokeAccessibilityService : AccessibilityService() {
                 // Step 3: Inject result or show feedback
                 if (result.isDictation && result.text.isNotBlank() && !isNoSpeechText(result.text)) {
                     injectText(result.text)
-                    bubble?.showFeedback("✓ Inserted", 1500)
+                    bubble?.showFeedback("Inserted", 1500)
                 } else if (result.success) {
-                    bubble?.showFeedback("✓ ${result.tool}: Done", 2500)
+                    bubble?.showFeedback("${result.tool}: Done", 2500)
                 } else {
-                    bubble?.showFeedback("✗ ${result.text.take(50)}", 3000)
+                    bubble?.showFeedback(result.text.take(50), 3000)
                 }
 
                 bubble?.setState(InvokeBubble.State.DONE)
@@ -302,12 +311,56 @@ class InvokeAccessibilityService : AccessibilityService() {
             normalized.contains("no_speech")
     }
 
-    // ─── Text Injection (works in ANY app) ───
+    private fun shouldFastPaste(text: String, prefs: SharedPreferences): Boolean {
+        val composioKey = prefs.getString("composio_api_key", "").orEmpty()
+        return composioKey.isBlank() || !looksLikeActionCommand(text)
+    }
+
+    private fun looksLikeActionCommand(text: String): Boolean {
+        val normalized = text.lowercase().trim()
+        val commandPrefixes = listOf(
+            "send ",
+            "email ",
+            "mail ",
+            "create ",
+            "open ",
+            "search ",
+            "look up ",
+            "google ",
+            "find ",
+            "schedule ",
+            "add ",
+            "post ",
+            "message ",
+            "slack ",
+            "github ",
+            "notion ",
+            "calendar "
+        )
+        val commandPhrases = listOf(
+            "send an email",
+            "send email",
+            "create an issue",
+            "create issue",
+            "search the web",
+            "web search",
+            "list my emails",
+            "read my emails"
+        )
+        return commandPrefixes.any { normalized.startsWith(it) } ||
+            commandPhrases.any { normalized.contains(it) }
+    }
+
+    // Text injection (works in most editable apps)
 
     private fun injectText(text: String) {
         // Always copy to clipboard as fallback
         val clip = ClipData.newPlainText("invoke", text)
         (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
+
+        if (tryFocusedInjection(text)) {
+            return
+        }
 
         // Find best injection target
         val candidates = findInjectionCandidates()
@@ -327,6 +380,25 @@ class InvokeAccessibilityService : AccessibilityService() {
 
         if (!injected) {
             Log.i(TAG, "No direct injection succeeded — clipboard fallback")
+        }
+    }
+
+    private fun tryFocusedInjection(text: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        return try {
+            val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                ?: root.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
+            if (focused == null) {
+                false
+            } else {
+                try {
+                    tryInject(focused, text)
+                } finally {
+                    focused.recycle()
+                }
+            }
+        } finally {
+            root.recycle()
         }
     }
 

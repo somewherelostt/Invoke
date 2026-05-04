@@ -1,18 +1,195 @@
 @import "tailwindcss";
 
 :root {
-  --color-invoke: #8B5CF6;
-  --color-invoke-hover: #7C3AED;
-  --color-surface: #18181B;
-  --color-surface-2: #27272A;
+  --color-invoke: #8b5cf6;
+  --color-invoke-hover: #7c3aed;
+  --color-ink: #351e38;
+  --color-muted: #7b627e;
+  --color-glass: rgba(255, 255, 255, 0.42);
+  --color-border: rgba(255, 255, 255, 0.62);
 }
 
 body {
-  background-color: #09090B;
-  color: #FAFAFA;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f4e9f7;
+  color: var(--color-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   overflow: hidden;
   user-select: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.desktop-shell {
+  position: relative;
+  background:
+    radial-gradient(circle at 32% 8%, rgba(255, 255, 255, 0.72), transparent 32%),
+    radial-gradient(circle at 78% 86%, rgba(211, 231, 234, 0.74), transparent 34%),
+    linear-gradient(135deg, #d493d6 0%, #f5d9f5 46%, #dfe8ec 100%);
+}
+
+.desktop-shell::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, black, transparent 82%);
+  opacity: 0.22;
+}
+
+.desktop-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.desktop-tile {
+  min-height: 108px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(18px);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.desktop-tile:hover {
+  background: rgba(255, 255, 255, 0.48);
+  transform: translateY(-2px);
+}
+
+.music-bubble {
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 24px 70px rgba(91, 50, 95, 0.18);
+  backdrop-filter: blur(22px);
+}
+
+.music-bars {
+  display: flex;
+  height: 58px;
+  align-items: center;
+  gap: 6px;
+}
+
+.music-bars span {
+  width: 5px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #442846, #a779ae);
+  animation: music-bar 920ms ease-in-out infinite;
+  animation-delay: calc(var(--i) * 70ms);
+  transform-origin: center;
+}
+
+.invoke-dock-button {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--color-ink);
+  padding: 7px 8px 7px 22px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 18px 48px rgba(92, 45, 99, 0.16);
+  backdrop-filter: blur(20px);
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.invoke-dock-button:hover {
+  background: rgba(255, 255, 255, 0.62);
+  transform: translateY(-1px);
+}
+
+.invoke-dock-button:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.invoke-dock-button:disabled {
+  cursor: wait;
+  opacity: 0.74;
+}
+
+.invoke-dock-mic {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--color-ink);
+  box-shadow: 0 8px 30px rgba(92, 45, 99, 0.15);
+}
+
+.primary-soft-button,
+.secondary-soft-button {
+  min-height: 44px;
+  border-radius: 999px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.primary-soft-button {
+  background: #3f2542;
+  color: #fff7ff;
+}
+
+.secondary-soft-button {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.42);
+  color: var(--color-ink);
+}
+
+.primary-soft-button:hover,
+.secondary-soft-button:hover {
+  transform: translateY(-1px);
+}
+
+.settings-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.42);
+  color: var(--color-ink);
+  padding: 10px 12px;
+  font-size: 13px;
+  outline: none;
+}
+
+.settings-input:focus {
+  border-color: rgba(63, 37, 66, 0.38);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+@keyframes music-bar {
+  0%,
+  100% {
+    transform: scaleY(0.54);
+    opacity: 0.58;
+  }
+  50% {
+    transform: scaleY(1.9);
+    opacity: 1;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -24,6 +201,6 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3F3F46;
+  background: rgba(70, 43, 73, 0.35);
   border-radius: 2px;
 }

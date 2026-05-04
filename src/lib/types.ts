@@ -32,11 +32,11 @@ export interface ActionLogEntry {
 }
 
 export const TOOL_LABELS: Record<string, string> = {
-  DICTATE: "📝 Dictate",
-  GMAIL_SEND_EMAIL: "📧 Email",
-  GITHUB_CREATE_ISSUE: "🐛 GitHub Issue",
-  SLACK_SEND_MESSAGE: "💬 Slack",
-  GOOGLECALENDAR_EVENTS_LIST: "📅 Calendar",
-  NOTION_CREATE_PAGE: "📒 Notion",
-  WEB_SEARCH: "🔍 Search",
+  DICTATE: "Dictate",
+  GMAIL_SEND_EMAIL: "Email",
+  GITHUB_CREATE_ISSUE: "GitHub Issue",
+  SLACK_SEND_MESSAGE: "Slack",
+  GOOGLECALENDAR_EVENTS_LIST: "Calendar",
+  NOTION_CREATE_PAGE: "Notion",
+  WEB_SEARCH: "Search",
 };

@@ -8,9 +8,10 @@ import { Settings } from "./components/Settings";
 import { StatusIndicator } from "./components/StatusIndicator";
 import { ActionLog } from "./components/ActionLog";
 import { InvokeButton } from "./components/InvokeButton";
+import { Settings2, Sparkle } from "lucide-react";
 
 function App() {
-  const { stage, settingsOpen, onboardingDone, toggleSettings, setStage, completeOnboarding } = useAppStore();
+  const { settingsOpen, onboardingDone, toggleSettings, setStage } = useAppStore();
 
   useEffect(() => {
     // Load settings on mount
@@ -76,51 +77,54 @@ function App() {
   // Show onboarding if not done
   if (!onboardingDone) {
     return (
-      <div className="h-screen bg-zinc-950 text-zinc-100">
+      <div className="h-[100dvh] overflow-hidden desktop-shell text-[#351e38]">
         <Onboarding />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100">
+    <div className="flex h-[100dvh] flex-col overflow-hidden desktop-shell text-[#351e38]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+      <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2">
-          <span className="text-lg">🔮</span>
-          <h1 className="text-sm font-semibold tracking-wide text-zinc-300">
-            INVOKE
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+            <Sparkle size={16} strokeWidth={1.7} />
+          </div>
+          <h1 className="font-serif text-xl font-normal text-[#351e38]">
+            Invoke
           </h1>
         </div>
         <div className="flex items-center gap-2">
           <StatusIndicator />
           <button
             onClick={toggleSettings}
-            className="p-1.5 rounded-md hover:bg-zinc-800 transition-colors text-zinc-500 hover:text-zinc-300"
+            aria-label={settingsOpen ? "Close settings" : "Open settings"}
+            className="rounded-full border border-white/60 bg-white/45 p-2 text-[#66516a] transition hover:bg-white/70 active:scale-[0.98]"
           >
-            ⚙️
+            <Settings2 size={16} strokeWidth={1.8} />
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden px-5 pb-5">
         {settingsOpen ? (
           <Settings />
         ) : (
-          <div className="flex flex-col h-full">
+          <div className="flex h-full flex-col">
             {/* Recording overlay area */}
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex min-h-0 flex-1 items-center justify-center">
               <RecordingOverlay />
             </div>
 
             {/* Invoke button */}
-            <div className="px-6 pb-4">
+            <div className="pb-4">
               <InvokeButton />
             </div>
 
             {/* Action log */}
-            <div className="border-t border-zinc-800 max-h-48 overflow-y-auto">
+            <div className="max-h-48 overflow-y-auto rounded-[24px] border border-white/60 bg-white/35">
               <ActionLog />
             </div>
           </div>

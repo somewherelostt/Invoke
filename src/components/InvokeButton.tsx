@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useAppStore } from "../stores/app-store";
+import { Mic2, Square } from "lucide-react";
 import type { ClassifiedIntent } from "../lib/types";
+import { useAppStore } from "../stores/app-store";
 
 interface ExecutionResult {
   success: boolean;
@@ -37,7 +38,6 @@ export function InvokeButton() {
         const text = (result.transcription as string) || "";
         setCurrentTranscription(text);
 
-        // Extract intent and execution from result
         const intent = result.intent as ClassifiedIntent | undefined;
         const execution = result.execution as ExecutionResult | undefined;
 
@@ -45,8 +45,8 @@ export function InvokeButton() {
           id: Date.now().toString(),
           timestamp: Date.now(),
           transcription: text,
-          intent: intent,
-          result: execution?.message || "Done",
+          intent,
+          result: execution?.message || (result.message as string) || "Done",
           stage: "idle",
         });
 
@@ -61,22 +61,24 @@ export function InvokeButton() {
     }
   };
 
-  let buttonClass = "w-full py-3 rounded-xl font-medium text-sm tracking-wide transition-all duration-200";
-  let label = "🔮 Tap to Speak";
-
-  if (isRecording) {
-    buttonClass += " bg-red-600 hover:bg-red-700 text-white animate-pulse";
-    label = "🔴 Recording... Tap to Stop";
-  } else if (isProcessing) {
-    buttonClass += " bg-violet-900/50 text-violet-300 cursor-wait";
-    label = "⏳ Processing...";
-  } else {
-    buttonClass += " bg-violet-600 hover:bg-violet-700 text-white active:scale-[0.98]";
-  }
+  const label = isRecording
+    ? "Stop recording"
+    : isProcessing
+      ? "Processing..."
+      : "Tap to speak";
 
   return (
-    <button onClick={handleClick} disabled={isProcessing} className={buttonClass}>
-      {label}
+    <button
+      onClick={handleClick}
+      disabled={isProcessing}
+      className={`invoke-dock-button ${isRecording ? "is-recording" : ""} ${isProcessing ? "is-processing" : ""}`}
+    >
+      <span className="flex min-w-0 flex-1 items-center gap-3">
+        <span className="text-[#66516a]">{label}</span>
+      </span>
+      <span className="invoke-dock-mic">
+        {isRecording ? <Square size={17} fill="currentColor" /> : <Mic2 size={20} strokeWidth={1.8} />}
+      </span>
     </button>
   );
 }
