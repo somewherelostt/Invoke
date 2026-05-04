@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build --webpack",
-    "dev": "next dev --webpack",
+    "build": "next build",
+    "dev": "next dev",
     "lint": "eslint .",
     "start": "next start"
   },
   "dependencies": {
+    "@builder.io/nextjs-plugin-jsx-loc": "0.1.4",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.12",
     "@radix-ui/react-alert-dialog": "1.1.15",
@@ -46,7 +47,7 @@
     "embla-carousel-react": "8.6.0",
     "input-otp": "1.4.2",
     "lucide-react": "^0.564.0",
-    "next": "16.2.0",
+    "next": "15.5.9",
     "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-day-picker": "9.13.2",
@@ -58,8 +59,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "1.0.7",
     "vaul": "^1.1.2",
-    "zod": "^3.24.1",
-    "@builder.io/nextjs-plugin-jsx-loc": "0.1.4"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.0",
