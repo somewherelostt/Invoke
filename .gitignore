@@ -4,14 +4,21 @@ node_modules/
 # Build output
 dist/
 target/
+android/.gradle/
+android/app/build/
 
 # Tauri / Rust
 src-tauri/target/
+
+# Android local binary dependencies
+android/app/libs/*.aar
 
 # Environment & secrets
 .env
 .env.local
 .env.*.local
+local.properties
+android/local.properties
 
 # OS files
 .DS_Store

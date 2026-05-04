@@ -34,8 +34,8 @@ interface AppState {
 const defaultSettings: AppSettings = {
   hotkey: "Alt+Space",
   whisper_model: "tiny",
-  llm_endpoint: "http://localhost:11434",
-  llm_model: "qwen3:0.6b",
+  llm_endpoint: import.meta.env.VITE_INVOKE_LLM_ENDPOINT ?? "http://localhost:11434",
+  llm_model: import.meta.env.VITE_INVOKE_LLM_MODEL ?? "qwen3:0.6b",
   composio_api_key: "",
   auto_paste: true,
   confirm_actions: true,

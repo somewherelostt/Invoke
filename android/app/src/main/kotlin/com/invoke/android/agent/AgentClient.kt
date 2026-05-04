@@ -67,8 +67,7 @@ private data class OllamaChatRequest(
 )
 
 private data class ComposioExecuteRequest(
-    val actionName: String,
-    val params: Map<String, String>
+    val arguments: Map<String, String>
 )
 
 // ---------------------------------------------------------------------------
@@ -80,14 +79,14 @@ class AgentClient {
     companion object {
         private const val TAG = "INVOKE"
 
-        private const val OLLAMA_ENDPOINT_DEFAULT = "192.168.1.100:11434"
+        private const val OLLAMA_ENDPOINT_DEFAULT = ""
         private const val OLLAMA_MODEL_DEFAULT = "qwen3:0.6b"
 
         private const val PREF_KEY_ENDPOINT = "ollama_endpoint"
         private const val PREF_KEY_MODEL = "ollama_model"
         private const val PREF_KEY_COMPOSIO = "composio_api_key"
 
-        private const val COMPOSIO_BASE_URL = "https://backend.composio.dev/api/v3/actions/execute"
+        private const val COMPOSIO_BASE_URL = "https://backend.composio.dev/api/v3.1"
 
         private const val CONNECT_TIMEOUT_SECONDS = 15L
         private const val READ_TIMEOUT_SECONDS = 120L    // Local LLM responses can be slow
@@ -112,9 +111,9 @@ Respond ONLY with valid JSON — no markdown, no explanation, no extra text. The
 }
 
 Available tools (use EXACTLY these names):
-- GMAIL_SEND_EMAIL        → params: to, subject, body
+- GMAIL_SEND_EMAIL        → params: recipient_email, subject, body
 - GMAIL_READ_EMAILS       → params: query, maxResults
-- GITHUB_CREATE_ISSUE     → params: owner, repo, title, body
+- GITHUB_CREATE_AN_ISSUE  → params: repo_name, title, body
 - GITHUB_LIST_ISSUES      → params: owner, repo, state
 - GITHUB_CREATE_PR        → params: owner, repo, title, head, base, body
 - SLACK_SEND_MESSAGE      → params: channel, text
@@ -125,7 +124,7 @@ Available tools (use EXACTLY these names):
 - CALENDAR_LIST_EVENTS    → params: timeMin, timeMax, maxResults
 - TODOIST_CREATE_TASK     → params: content, dueDate, priority
 - TODOIST_LIST_TASKS      → params: filter
-- WEB_SEARCH              → params: query
+- COMPOSIO_SEARCH_WEB     → params: query
 
 If the user's text does NOT clearly map to any of these tools (e.g. it is just plain speech or dictation),
 respond with:
@@ -251,15 +250,12 @@ Important rules:
             "action" -> {
                 Log.d(TAG, "Executing action [${intent.tool}] via Composio")
                 try {
-                    val payload = ComposioExecuteRequest(
-                        actionName = intent.tool,
-                        params = intent.params
-                    )
+                    val payload = ComposioExecuteRequest(arguments = intent.params)
                     val jsonBody = gson.toJson(payload)
                     Log.d(TAG, "Composio request: $jsonBody")
 
                     val request = Request.Builder()
-                        .url(COMPOSIO_BASE_URL)
+                        .url("$COMPOSIO_BASE_URL/tools/execute/${intent.tool}")
                         .header("x-api-key", composioKey)
                         .header("Content-Type", "application/json")
                         .post(jsonBody.toRequestBody(JSON_MEDIA_TYPE))
@@ -277,11 +273,12 @@ Important rules:
                             )
                         } else {
                             Log.d(TAG, "Composio success: ${truncate(body, 500)}")
+                            val resultText = extractComposioResultText(body)
                             ActionResult(
                                 success = true,
-                                text = body,
+                                text = resultText,
                                 tool = intent.tool,
-                                isDictation = false
+                                isDictation = intent.tool == "COMPOSIO_SEARCH_WEB"
                             )
                         }
                     }
@@ -341,8 +338,9 @@ Important rules:
         Log.d(TAG, "classifyAndExecute → endpoint=$endpoint, model=$model, " +
                 "composioKey=${if (composioKey.isNotBlank()) "***" else "(empty)"}")
 
-        // Step 1 – classify
-        val intent = classifyIntent(text, endpoint, model)
+        // Step 1 – classify. Obvious command forms are routed deterministically so
+        // tiny local models cannot miss common actions such as web search.
+        val intent = classifyRuleBased(text) ?: classifyIntent(text, endpoint, model)
         Log.d(TAG, "Classified → tool=${intent.tool}, confidence=${intent.confidence}, " +
                 "actionType=${intent.actionType}, params=${intent.params}")
 
@@ -422,6 +420,40 @@ Important rules:
         }
     }
 
+    private fun classifyRuleBased(rawText: String): ClassifiedIntent? {
+        val normalized = rawText.lowercase().trim()
+        val wantsWebSearch = listOf(
+            "search the web",
+            "web search",
+            "search online",
+            "look up",
+            "google",
+            "find online",
+            "latest "
+        ).any { normalized.contains(it) }
+
+        if (wantsWebSearch) {
+            val query = rawText
+                .replace(Regex("(?i)^search the web for\\s+"), "")
+                .replace(Regex("(?i)^web search\\s+"), "")
+                .replace(Regex("(?i)^search online for\\s+"), "")
+                .replace(Regex("(?i)^look up\\s+"), "")
+                .replace(Regex("(?i)^google\\s+"), "")
+                .replace(Regex("(?i)^find online\\s+"), "")
+                .trim()
+
+            return ClassifiedIntent(
+                tool = "COMPOSIO_SEARCH_WEB",
+                confidence = 1.0f,
+                params = mapOf("query" to query.ifBlank { rawText }),
+                rawText = rawText,
+                actionType = "action"
+            )
+        }
+
+        return null
+    }
+
     /**
      * Returns a fallback "dictate" intent so the user's text is never lost.
      */
@@ -457,5 +489,23 @@ Important rules:
      */
     private fun truncate(text: String, maxLen: Int): String {
         return if (text.length <= maxLen) text else text.substring(0, maxLen) + "…"
+    }
+
+    private fun extractComposioResultText(body: String): String {
+        return try {
+            val root = JsonParser.parseString(body).asJsonObject
+            val data = root.get("data")
+            if (data != null && data.isJsonObject) {
+                val obj = data.asJsonObject
+                obj.get("answer")?.asString
+                    ?: obj.get("result")?.asString
+                    ?: obj.get("text")?.asString
+                    ?: truncate(obj.toString(), 1000)
+            } else {
+                truncate(body, 1000)
+            }
+        } catch (_: Exception) {
+            truncate(body, 1000)
+        }
     }
 }

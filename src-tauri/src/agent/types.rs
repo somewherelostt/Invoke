@@ -19,16 +19,16 @@ pub enum AgentEvent {
 pub const SUPPORTED_TOOLS: &[&str] = &[
     "DICTATE",
     "GMAIL_SEND_EMAIL",
-    "GITHUB_CREATE_ISSUE",
+    "GITHUB_CREATE_AN_ISSUE",
     "SLACK_SEND_MESSAGE",
     "GOOGLECALENDAR_EVENTS_LIST",
     "NOTION_CREATE_PAGE",
-    "WEB_SEARCH",
+    "COMPOSIO_SEARCH_WEB",
 ];
 
 /// System prompt for Qwen 3 0.6B intent classification
 pub const CLASSIFICATION_PROMPT: &str = r#"You are an intent classifier. Given transcribed speech, output ONLY a JSON object with:
-- "tool": one of [DICTATE, GMAIL_SEND_EMAIL, GITHUB_CREATE_ISSUE, SLACK_SEND_MESSAGE, GOOGLECALENDAR_EVENTS_LIST, NOTION_CREATE_PAGE, WEB_SEARCH]
+- "tool": one of [DICTATE, GMAIL_SEND_EMAIL, GITHUB_CREATE_AN_ISSUE, SLACK_SEND_MESSAGE, GOOGLECALENDAR_EVENTS_LIST, NOTION_CREATE_PAGE, COMPOSIO_SEARCH_WEB]
 - "parameters": relevant parameters as JSON
 - "confidence": 0.0 to 1.0
 
@@ -38,6 +38,7 @@ Examples:
 "Hello world" -> {"tool":"DICTATE","parameters":{"text":"Hello world"},"confidence":0.95}
 "Slack the team: deploy done" -> {"tool":"SLACK_SEND_MESSAGE","parameters":{"channel":"team","message":"deploy done"},"confidence":0.88}
 "What's on my calendar today" -> {"tool":"GOOGLECALENDAR_EVENTS_LIST","parameters":{"timeMin":"today"},"confidence":0.82}
-"Search for Rust Tauri tutorials" -> {"tool":"WEB_SEARCH","parameters":{"query":"Rust Tauri tutorials"},"confidence":0.9}
+"Search for Rust Tauri tutorials" -> {"tool":"COMPOSIO_SEARCH_WEB","parameters":{"query":"Rust Tauri tutorials"},"confidence":0.9}
+"Search the web for OpenAI official website" -> {"tool":"COMPOSIO_SEARCH_WEB","parameters":{"query":"OpenAI official website"},"confidence":1.0}
 
 Output ONLY the JSON object, nothing else."#;

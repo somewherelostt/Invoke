@@ -169,12 +169,18 @@ pub fn get_settings(
 pub async fn invoke_action(
     coordinator: State<'_, CoordinatorState>,
     tool_state: State<'_, ToolState>,
+    settings: State<'_, std::sync::Mutex<AppSettings>>,
     text: String,
 ) -> Result<serde_json::Value, String> {
     info!("🔮 Invoke action: {}", text);
     coordinator.set_stage(Stage::Processing);
 
-    let llm = LlmClient::new("http://localhost:11434", "qwen3:0.6b");
+    let (llm_endpoint, llm_model) = {
+        let s = settings.lock().map_err(|e| e.to_string())?;
+        (s.llm_endpoint.clone(), s.llm_model.clone())
+    };
+
+    let llm = LlmClient::new(&llm_endpoint, &llm_model);
     
     let classified = llm.classify_intent(&text).await
         .unwrap_or_else(|e| {
