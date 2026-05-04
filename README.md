@@ -269,20 +269,49 @@ npm install
 ollama pull qwen3:0.6b
 ```
 
-Copy `.env.example` to `.env` and fill in local values:
+Copy `.env.example` to `.env` and fill in local values. `.env.local` is also supported for local overrides.
 
 ```bash
 INVOKE_LLM_ENDPOINT=http://localhost:11434
 INVOKE_LLM_MODEL=qwen3:0.6b
 INVOKE_WHISPER_MODEL=tiny
 INVOKE_COMPOSIO_API_KEY=
+
+VITE_INVOKE_LLM_ENDPOINT=http://localhost:11434
+VITE_INVOKE_LLM_MODEL=qwen3:0.6b
 ```
 
-Run the desktop app:
+Start the local services the desktop app expects:
+
+```bash
+# Terminal 1: Ollama
+ollama serve
+
+# Terminal 2: local Whisper HTTP server on http://127.0.0.1:8394
+python -m pip install faster-whisper flask
+python scripts/whisper_server.py --model tiny --port 8394
+```
+
+Run the desktop app from a third terminal:
 
 ```bash
 npm run tauri -- dev
 ```
+
+On Unix-like shells, `./start.sh --dev` can start Ollama, the Whisper server, install npm dependencies if needed, and run Tauri in one command.
+
+### Desktop Commands
+
+Run these from the repository root:
+
+```bash
+npm run dev           # Vite-only desktop UI on http://localhost:1420
+npm run build         # Type-check and build the desktop web bundle
+npm run tauri -- dev  # Tauri desktop app in development mode
+npm run tauri -- build # Package the desktop app; output is under src-tauri/target/release/bundle/
+```
+
+There is no root test script yet; use `npm run build` plus the relevant Rust, Android, or frontend commands below as the current verification path.
 
 ### Android Setup
 
@@ -302,6 +331,36 @@ First launch opens the Invoke onboarding flow:
 6. Finish with dictionary, style, and snippets personalization.
 
 Normal users do not need to enter backend project settings during onboarding. Developer backend configuration lives under Advanced setup.
+
+---
+
+## Landing Frontend
+
+The marketing/landing site is a separate Next.js app in `frontend/`.
+
+```bash
+cd frontend
+npm install
+npm run dev    # Next.js dev server
+npm run lint   # ESLint
+npm run build  # Production build
+```
+
+---
+
+## Environment Variables
+
+| Variable | Used by | Default | Notes |
+| --- | --- | --- | --- |
+| `INVOKE_LLM_ENDPOINT` | Tauri backend | `http://localhost:11434` | Ollama or another OpenAI-compatible local endpoint. |
+| `INVOKE_LLM_MODEL` | Tauri backend | `qwen3:0.6b` | Intent-routing model name. |
+| `INVOKE_WHISPER_MODEL` | Tauri backend / Whisper server | `tiny` | Whisper model size to load. |
+| `INVOKE_COMPOSIO_API_KEY` | Tauri backend | empty | Optional; without it, Composio actions are simulated. |
+| `INVOKE_HOTKEY` | Tauri backend | `Alt+Space` | Global desktop shortcut. |
+| `VITE_INVOKE_LLM_ENDPOINT` | Vite UI | `http://localhost:11434` | Frontend-visible local model endpoint. |
+| `VITE_INVOKE_LLM_MODEL` | Vite UI | `qwen3:0.6b` | Frontend-visible model name. |
+
+Never commit `.env`, `.env.local`, local properties, credentials, or generated build outputs.
 
 ---
 
@@ -348,7 +407,18 @@ Use platform-secure storage before production release.
 - Multi-step actions need careful confirmation.
 - Some Composio actions require connected user accounts.
 - Long dictation may need a larger speech model for better accuracy.
+- Desktop recording currently depends on the separate local Whisper server at `http://127.0.0.1:8394`.
 - Android voice bubble and sync flows are still evolving.
+
+---
+
+## Troubleshooting
+
+- **Desktop transcription fails**: confirm `python scripts/whisper_server.py --model tiny --port 8394` is running and `http://127.0.0.1:8394/health` returns `{"status":"ok"}`.
+- **Intent routing fails**: confirm Ollama is running, `ollama pull qwen3:0.6b` has completed, and `INVOKE_LLM_ENDPOINT` points to the Ollama host.
+- **Composio actions do not execute**: set `INVOKE_COMPOSIO_API_KEY`; otherwise actions run in simulation mode.
+- **Android cannot reach Ollama**: run Ollama bound to the LAN with `OLLAMA_HOST=0.0.0.0:11434 ollama serve`, use the computer's LAN IP in the app, and keep both devices on the same network.
+- **Windows shell differences**: `start.sh` is for Unix-like shells. On PowerShell, start Ollama, the Whisper server, and `npm run tauri -- dev` in separate terminals.
 
 ---
 
@@ -359,6 +429,7 @@ Invoke/
 ├── src/                 # React desktop UI
 ├── src-tauri/           # Rust and Tauri desktop runtime
 ├── android/             # Kotlin Android app
+├── frontend/            # Next.js landing site
 ├── scripts/             # Local helper scripts
 ├── public/              # Static assets
 ├── package.json         # Desktop dependencies and scripts
