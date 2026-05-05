@@ -180,7 +180,13 @@
 
 .hero-nav {
   animation-delay: 80ms;
-  transform: translateY(-10px);
+  transition: background 300ms ease, backdrop-filter 300ms ease, box-shadow 300ms ease;
+}
+
+.hero-nav--scrolled {
+  background: rgba(8, 17, 31, 0.72);
+  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.28);
 }
 
 .hero-kicker {
