@@ -1,7 +1,9 @@
 "use client"
 
 import type { CSSProperties } from "react"
+import { useEffect, useRef } from "react"
 import { ArrowDown, ArrowRight, CheckCircle2, Github, Mic2, Sparkles, Workflow } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const navItems = [
   { label: "Problem", href: "#problem" },
@@ -32,6 +34,18 @@ const commandRail = [
 ]
 
 export function HeroSection() {
+  const navRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const nav = navRef.current
+    if (!nav) return
+    const onScroll = () => {
+      nav.classList.toggle("hero-nav--scrolled", window.scrollY > 24)
+    }
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
   return (
     <section className="hero-shell relative min-h-screen overflow-hidden">
       {/* HERO MOTION STORYBOARD
@@ -43,7 +57,8 @@ export function HeroSection() {
        * 520ms console slides in from right
        * 700ms command cards stagger inside the console
        */}
-      <header className="hero-nav relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 md:px-10 lg:px-12">
+      <header ref={navRef} className="hero-nav fixed top-0 left-0 z-50 w-full">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 md:px-10 lg:px-12">
         <a href="#" className="flex items-center gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-primary shadow-sm">
             <Mic2 className="h-5 w-5" />
@@ -61,9 +76,11 @@ export function HeroSection() {
           <Github className="h-4 w-4" />
           View GitHub
         </a>
+        <ThemeToggle />
+        </div>
       </header>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-88px)] w-full max-w-7xl gap-12 px-6 pb-16 pt-10 md:px-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:px-12">
+      <div className="relative z-10 mx-auto grid min-h-screen w-full max-w-7xl gap-12 px-6 pb-16 pt-28 md:px-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:px-12">
         <div>
           <div className="hero-kicker mb-8 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-sm text-white/84 backdrop-blur">
             <Sparkles className="h-4 w-4 text-cyan-200" />
