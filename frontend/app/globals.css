@@ -48,6 +48,32 @@
   --sidebar-ring: #245BFF;
 }
 
+.dark {
+  --ink: #E8EEF8;
+  --paper: #111827;
+  --mist: #1A2740;
+  --graphite: #1E2D47;
+
+  --background: #0D1220;
+  --foreground: #E8EEF8;
+  --card: #131B2E;
+  --card-foreground: #E8EEF8;
+  --popover: #131B2E;
+  --popover-foreground: #E8EEF8;
+  --primary-foreground: #FFFFFF;
+  --secondary: #1A2438;
+  --secondary-foreground: #E8EEF8;
+  --muted: #1A2438;
+  --muted-foreground: #8A9BBB;
+  --accent: #1A2E50;
+  --accent-foreground: #E8EEF8;
+  --border: #1E2D47;
+  --input: #1E2D47;
+  --sidebar: #111827;
+  --sidebar-foreground: #E8EEF8;
+  --sidebar-border: #1E2D47;
+}
+
 @theme inline {
   --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
   --font-serif: 'Instrument Serif', 'Georgia', serif;
@@ -111,6 +137,7 @@
 
   html {
     scroll-behavior: smooth;
+    color-scheme: light dark;
   }
 
   body {
@@ -118,6 +145,7 @@
     color: var(--color-foreground);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 300ms ease, color 300ms ease;
   }
 
   h1,
@@ -375,10 +403,47 @@
   border-radius: 22px;
   background: linear-gradient(145deg, #ffffff, #f8fbff);
   box-shadow: 0 20px 50px rgba(8, 17, 31, 0.07);
+  transition: border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease, background 300ms ease;
+}
+
+.dark .surface-card,
+.dark .platform-card,
+.dark .privacy-band,
+.dark .pipeline-panel {
+  background: linear-gradient(145deg, #131B2E, #0F1728);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+}
+
+.dark .scenario-card {
+  background: linear-gradient(145deg, #131B2E, #0F1728);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+}
+
+.dark .surface-card:hover {
+  border-color: rgba(36, 91, 255, 0.45);
+  box-shadow: 0 24px 60px rgba(36, 91, 255, 0.14);
+}
+
+.dark .scenario-card:hover {
+  border-color: rgba(36, 91, 255, 0.45);
+  box-shadow: 0 28px 70px rgba(36, 91, 255, 0.16);
+}
+
+.dark .pipeline-index {
+  background-color: #1A2740;
+  color: var(--primary-light);
+}
+
+.dark .command-row {
+  border-color: var(--border);
+}
+
+.dark .command-row:hover {
+  color: var(--primary-light);
 }
 
 .surface-card {
-  transition: border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+  /* Transition handled above */
 }
 
 .surface-card:hover {
@@ -395,7 +460,7 @@
   overflow: hidden;
   opacity: 0;
   transform: translateY(20px) rotateX(3deg);
-  transition: border-color 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+  /* Transition handled in combined block above */
 }
 
 .section-reveal.visible .scenario-card {
@@ -620,9 +685,86 @@
   color: var(--primary);
 }
 
+.dark .command-row span {
+  color: var(--primary-light);
+}
+
 .command-row p {
   color: var(--ink);
   font-size: clamp(1.05rem, 2vw, 1.4rem);
+}
+
+/* ── Theme Toggle ─────────────────────────────────────── */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.theme-toggle-placeholder {
+  width: 44px;
+  height: 24px;
+}
+
+.theme-toggle-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  transition: background 240ms ease, border-color 240ms ease;
+}
+
+.theme-toggle:hover .theme-toggle-track {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.theme-toggle-thumb {
+  position: absolute;
+  left: 3px;
+  display: grid;
+  height: 18px;
+  width: 18px;
+  place-items: center;
+  border-radius: 999px;
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+  transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1), background 240ms ease, color 240ms ease;
+}
+
+/* In dark mode the thumb slides right and flips style */
+.dark .theme-toggle-thumb {
+  transform: translateX(20px);
+  background: var(--primary);
+  color: white;
+}
+
+/* When the toggle is inside a non-hero (light bg) context, adapt track */
+.theme-toggle-light .theme-toggle-track {
+  border-color: var(--border);
+  background: var(--muted);
+}
+
+.theme-toggle-light .theme-toggle-thumb {
+  color: var(--primary);
+  background: white;
+}
+
+.dark .theme-toggle-light .theme-toggle-thumb {
+  background: var(--primary);
+  color: white;
 }
 
 @keyframes pulse-ring {
