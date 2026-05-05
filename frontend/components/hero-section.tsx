@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react"
 import { useEffect, useRef } from "react"
 import { ArrowDown, ArrowRight, CheckCircle2, Github, Mic2, Sparkles, Workflow } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const navItems = [
   { label: "Problem", href: "#problem" },
@@ -75,6 +76,7 @@ export function HeroSection() {
           <Github className="h-4 w-4" />
           View GitHub
         </a>
+        <ThemeToggle />
         </div>
       </header>
 
