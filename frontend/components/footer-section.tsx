@@ -2,7 +2,7 @@ import { ArrowRight, Github, Mic2 } from "lucide-react"
 
 export function FooterSection() {
   return (
-    <footer id="github" className="bg-ink px-6 py-20 text-white md:px-12 lg:px-20">
+    <footer id="github" className="bg-[#08111F] px-6 py-20 text-white md:px-12 lg:px-20">
       <div className="mx-auto max-w-6xl">
         <div className="grid gap-10 border-b border-white/10 pb-16 lg:grid-cols-[1fr_0.75fr] lg:items-end">
           <div>
