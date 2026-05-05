@@ -1,7 +1,7 @@
 "use client"
 
 import type { CSSProperties } from "react"
-import { ArrowDown, ArrowRight, CheckCircle2, Github, Mic2, Sparkles, Workflow } from "lucide-react"
+import { ArrowRight, Github, Mic2, Sparkles, CheckCircle2 } from "lucide-react"
 
 const navItems = [
   { label: "Problem", href: "#problem" },
@@ -24,137 +24,111 @@ const commandRail = [
     tool: "GITHUB_CREATE_ISSUE",
     status: "queued",
   },
-  {
-    speech: "Search the web for Android privacy changes.",
-    tool: "COMPOSIO_SEARCH_WEB",
-    status: "done",
-  },
 ]
 
 export function HeroSection() {
   return (
-    <section className="hero-shell relative min-h-screen overflow-hidden">
-      {/* HERO MOTION STORYBOARD
-       *   0ms static shell visible, no blocked CTA
-       *  80ms brand/nav settles down
-       * 160ms voice-action badge fades up
-       * 260ms headline rises in
-       * 420ms body copy and CTAs follow
-       * 520ms console slides in from right
-       * 700ms command cards stagger inside the console
-       */}
-      <header className="hero-nav relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 md:px-10 lg:px-12">
+    <section className="hero-shell relative min-h-screen flex flex-col pt-6 pb-20">
+      <header className="hero-nav relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 md:px-12">
         <a href="#" className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-primary shadow-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-primary shadow-lg">
             <Mic2 className="h-5 w-5" />
-          </span>
+          </div>
           <span className="font-mono text-sm uppercase tracking-[0.24em] text-white">Invoke</span>
         </a>
-        <nav className="hidden items-center gap-5 text-sm text-white/70 lg:flex">
+        <nav className="hidden items-center gap-6 text-xs font-bold uppercase tracking-widest text-white/50 lg:flex">
           {navItems.map((item) => (
             <a key={item.href} href={item.href} className="transition-colors hover:text-white">
               {item.label}
             </a>
           ))}
         </nav>
-        <a href="https://github.com/somewherelostt/Invoke" target="_blank" rel="noopener noreferrer" className="hidden items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-primary transition-transform hover:-translate-y-0.5 md:inline-flex">
+        <a href="https://github.com/somewherelostt/Invoke" target="_blank" className="flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-primary shadow-xl">
           <Github className="h-4 w-4" />
           View GitHub
         </a>
       </header>
 
-      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-88px)] w-full max-w-7xl gap-12 px-6 pb-16 pt-10 md:px-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:px-12">
-        <div>
-          <div className="hero-kicker mb-8 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-sm text-white/84 backdrop-blur">
-            <Sparkles className="h-4 w-4 text-cyan-200" />
+      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 items-center gap-16 px-6 md:px-12 lg:grid-cols-[1fr_0.8fr]">
+        <div className="max-w-2xl">
+          <div className="hero-kicker mb-10 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">
+            <Sparkles className="h-3 w-3" />
             Voice actions for every app
           </div>
 
-          <h1 className="hero-title max-w-4xl text-white">
-            Speak once.
-            <br />
-            <span className="text-white/72">Invoke handles the rest.</span>
+          <h1 className="hero-title font-serif text-7xl md:text-8xl lg:text-9xl text-white leading-[0.85] tracking-tight mb-12">
+            Speak once. <br />
+            Invoke <br />
+            <span className="italic text-white/50">handles the rest.</span>
           </h1>
 
-          <p className="hero-copy mt-8 max-w-2xl text-xl leading-relaxed text-white/78 md:text-2xl">
-            Turn speech into messages, notes, snippets, searches, and app actions. Use local AI through Ollama, connect tools through Composio, and keep control of your data with privacy-first setup.
+          <p className="hero-copy text-xl md:text-2xl text-white/60 leading-relaxed max-w-xl">
+            Turn speech into messages, notes, snippets, searches, and app actions. Use local AI to bridge the gap between intent and execution.
           </p>
 
-          <div className="hero-actions mt-10 flex flex-col gap-3 sm:flex-row">
-            <a href="https://github.com/somewherelostt/Invoke" target="_blank" rel="noopener noreferrer" className="cta-primary group">
-              View GitHub
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </a>
-            <a href="#how-it-works" className="cta-secondary">
-              See how it works
+          <div className="hero-actions mt-16 flex flex-col gap-6 sm:flex-row sm:items-center">
+            <a href="https://github.com/somewherelostt/Invoke" target="_blank" className="inline-flex items-center gap-4 text-xl font-bold text-white group">
+              Get Started
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-primary transition-transform group-hover:translate-x-2">
+                <ArrowRight className="h-6 w-6" />
+              </div>
             </a>
           </div>
         </div>
 
-        <div className="hero-console hero-console-entrance">
-          <div className="console-topbar">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-red-300" />
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
-            </div>
-            <span>local endpoint active</span>
-          </div>
-
-          <div className="voice-card">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-white/54">Listening</p>
-                <p className="mt-1 text-xl text-white">Natural speech to structured actions</p>
+        <div className="hero-console-entrance hidden lg:block">
+          <div className="relative rounded-[2rem] border border-white/10 bg-black/40 p-1 backdrop-blur-2xl shadow-2xl">
+            <div className="rounded-[1.8rem] border border-white/5 bg-gradient-to-b from-white/[0.08] to-transparent p-8 md:p-10">
+              <div className="mb-10 flex items-center justify-between">
+                <div className="flex gap-2">
+                  <div className="h-3 w-3 rounded-full bg-red-500/50" />
+                  <div className="h-3 w-3 rounded-full bg-amber-500/50" />
+                  <div className="h-3 w-3 rounded-full bg-emerald-500/50" />
+                </div>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">local endpoint active</span>
               </div>
-              <div className="mic-pulse">
-                <Mic2 className="h-6 w-6" />
-              </div>
-            </div>
-            <div className="waveform" aria-hidden="true">
-              {Array.from({ length: 18 }).map((_, index) => (
-                <span
-                  key={index}
-                  style={
-                    {
-                      "--bar": `${18 + ((index * 13) % 44)}px`,
-                      "--wave-delay": `${index * 54}ms`,
-                    } as CSSProperties
-                  }
-                />
-              ))}
-            </div>
-          </div>
 
-          <div className="space-y-3">
-            {commandRail.map((item, index) => (
-              <div
-                key={item.tool}
-                className="command-card"
-                style={{ "--card-delay": `${760 + index * 120}ms` } as CSSProperties}
-              >
-                <p>"{item.speech}"</p>
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <span className="font-mono text-xs text-cyan-200">{item.tool}</span>
-                  <span className="flex items-center gap-1.5 rounded-full bg-white/8 px-2.5 py-1 text-xs text-white/70">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-200" />
-                    {item.status}
-                  </span>
+              <div className="space-y-8">
+                <div className="rounded-2xl border border-white/5 bg-white/5 p-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Listening</p>
+                      <p className="mt-2 text-2xl font-medium text-white">Natural speech to structured actions</p>
+                    </div>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary shadow-[0_0_50px_rgba(36,91,255,0.4)]">
+                      <Mic2 className="h-7 w-7 text-white" />
+                    </div>
+                  </div>
+                  <div className="mt-10 flex items-end gap-1.5 h-16" aria-hidden="true">
+                    {[30, 60, 45, 80, 50, 40, 70, 55, 65, 45, 35, 50, 40, 60, 55].map((h, i) => (
+                      <div 
+                        key={i} 
+                        className="flex-1 rounded-full bg-primary/40 animate-wave-breathe" 
+                        style={{ height: `${h}%`, animationDelay: `${i * 80}ms` }} 
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {commandRail.map((item, i) => (
+                    <div key={i} className="flex flex-col gap-4 rounded-2xl border border-white/5 bg-white/5 p-6 transition-colors hover:bg-white/10">
+                      <p className="text-lg italic text-white/90">"{item.speech}"</p>
+                      <div className="flex items-center justify-between border-t border-white/5 pt-4">
+                        <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-400/60">{item.tool}</span>
+                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                          {item.status}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="route-strip">
-            <Workflow className="h-4 w-4 text-cyan-200" />
-            <span>Voice input &gt; Whisper &gt; Qwen 3 0.6B &gt; Composio action</span>
+            </div>
           </div>
         </div>
       </div>
-
-      <a href="#problem" className="absolute bottom-7 left-1/2 z-10 -translate-x-1/2 animate-bounce text-white/45">
-        <ArrowDown className="h-6 w-6" />
-      </a>
     </section>
   )
 }

@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react"
 import {
   ArrowRight,
   Brain,
@@ -21,16 +20,8 @@ import {
 } from "lucide-react"
 import { HeroSection } from "@/components/hero-section"
 import { FooterSection } from "@/components/footer-section"
-import { SectionWrapper } from "@/components/section-wrapper"
-
-const actionExamples = [
-  "Search the web for the latest Kotlin Android updates.",
-  "Create a GitHub issue titled login crash.",
-  "Draft an email to Maya about the invoice.",
-  "Clean this sentence and make it sound professional.",
-  "Save my email address as a snippet.",
-  "Send a Slack message saying I'll be five minutes late.",
-]
+import { Section, Label, Heading, Subtext } from "@/components/layout-system"
+import { cn } from "@/lib/utils"
 
 const features = [
   {
@@ -62,312 +53,189 @@ const pipeline = [
   { label: "Execute", body: "Composio or local tools complete the task." },
 ]
 
-const integrations = [
-  { icon: Mail, name: "Gmail", command: "Draft an email to Alex about the project update." },
-  { icon: CalendarDays, name: "Calendar", command: "What meetings do I have tomorrow?" },
-  { icon: Github, name: "GitHub", command: "Create an issue for the login button bug." },
-  { icon: MessageSquare, name: "Slack", command: "Tell the team I'm joining late." },
-  { icon: Code2, name: "Notion", command: "Create a note from this idea." },
-  { icon: Search, name: "Web Search", command: "Find the best local AI models for Android." },
-]
-
-const realLifeMoments = [
+const useCases = [
   {
-    icon: TrainFront,
     label: "Crowded commute",
     title: "Review a PR while standing in a packed train.",
-    scene: "You do not have a seat, your laptop is closed, and the train is loud. Open the Android mic bubble, use an earbud mic, and say what you want reviewed.",
+    desc: "You do not have a seat, your laptop is closed, and the train is loud. Open the Android mic bubble, use an earbud mic, and say what you want reviewed.",
     command: "Review the auth PR, summarize the risky files, and draft one comment about token refresh.",
     outcome: "Invoke transcribes, classifies the GitHub action, drafts the review note, and asks before posting.",
-    proof: "Noise-aware capture + confirmation",
   },
   {
     icon: Headphones,
     label: "Shared office",
     title: "Whisper a polished reply without disturbing anyone.",
-    scene: "You are in an open office or library and need to answer quickly. Speak quietly into a close mic and let Invoke clean the wording.",
+    desc: "You are in an open office or library and need to answer quickly. Speak quietly into a close mic and let Invoke clean the wording.",
     command: "Reply to Sarah that I can join tomorrow, make it warm and professional.",
     outcome: "Invoke drafts the message with your work style preset and keeps private mode local-first.",
-    proof: "Whisper-friendly dictation",
   },
   {
     icon: Plane,
     label: "Between gates",
     title: "Turn a passing thought into an organized task before it disappears.",
-    scene: "You are walking through an airport with one hand free. Instead of opening Notion, Todoist, and Calendar, capture the whole workflow by voice.",
+    desc: "You are walking through an airport with one hand free. Instead of opening Notion, Todoist, and Calendar, capture the whole workflow by voice.",
     command: "Save this as a product idea, create a follow-up task for Friday, and search examples of Android voice bubbles.",
     outcome: "Invoke routes each part to the right connected tool and shows a clear action summary.",
-    proof: "Multi-step routing",
   },
+]
+
+const integrations = [
+  { icon: Mail, name: "Gmail" },
+  { icon: CalendarDays, name: "Calendar" },
+  { icon: Github, name: "GitHub" },
+  { icon: MessageSquare, name: "Slack" },
+  { icon: Code2, name: "Notion" },
+  { icon: Search, name: "Web Search" },
 ]
 
 function ProblemSection() {
   return (
-    <SectionWrapper id="problem" variant="default">
-      <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-        <div>
-          <span className="section-kicker">The Problem</span>
-          <h2 className="mt-4 max-w-3xl text-ink">Typing, switching apps, and copying text slows everything down.</h2>
-        </div>
-        <div className="space-y-4 text-lg text-muted-foreground">
-          <p>
-            Most productivity tools still make you open five windows, type a prompt, copy the result, and paste it somewhere else.
-          </p>
-          <p>
-            Dictation apps stop at text. Invoke goes further: it understands what you meant, picks the right route, and helps finish the action.
-          </p>
-        </div>
+    <Section id="problem" className="relative overflow-hidden bg-black/20">
+      <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] [background-size:32px_32px]" />
+      <div className="max-w-2xl space-y-6 relative z-10">
+        <Label className="text-cyan-400">The Problem</Label>
+        <Heading className="text-white">Typing and switching apps slows you down.</Heading>
+        <Subtext className="text-xl text-white/60">
+          Most productivity tools still make you open five windows, type a prompt, copy the result, and paste it somewhere else. Invoke understands what you meant and helps finish the action locally.
+        </Subtext>
       </div>
-    </SectionWrapper>
+    </Section>
   )
 }
 
-function FeatureSection() {
+function SolutionSection() {
   return (
-    <SectionWrapper id="features" variant="alternate">
-      <div className="mb-12 max-w-3xl">
-        <span className="section-kicker">What Invoke Does</span>
-        <h2 className="mt-4 text-ink">Use your voice like a command bar.</h2>
-        <p className="mt-5 text-lg text-muted-foreground">
-          Invoke understands natural speech and turns it into structured actions. Dictate anywhere, clean up rough thoughts, save reusable snippets, and trigger workflows across connected apps.
-        </p>
+    <Section id="solution" className="bg-primary/5">
+      <div className="max-w-3xl space-y-6">
+        <Label className="text-cyan-400">The Solution</Label>
+        <Heading className="text-white">Voice as a command bar.</Heading>
+        <Subtext className="text-white/60">
+          Invoke turns natural speech into structured actions. Dictate anywhere, clean up rough thoughts, and trigger workflows across all your connected apps instantly.
+        </Subtext>
       </div>
-      <div className="stagger-grid grid gap-4 md:grid-cols-2">
-        {features.map((feature) => {
-          const Icon = feature.icon
-          return (
-            <article key={feature.title} className="surface-card group p-6">
-              <div className="mb-8 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-transform duration-300 group-hover:-translate-y-1">
-                <Icon className="h-5 w-5" />
-              </div>
-              <h3 className="text-xl text-ink">{feature.title}</h3>
-              <p className="mt-3 text-muted-foreground">{feature.body}</p>
-            </article>
-          )
-        })}
-      </div>
-    </SectionWrapper>
+    </Section>
   )
 }
 
-function RealLifeSection() {
+function FeaturesSection() {
   return (
-    <SectionWrapper id="real-life" variant="default">
-      <div className="mb-12 grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-        <div>
-          <span className="section-kicker">Real Life</span>
-          <h2 className="mt-4 text-ink">Built for the moments where typing falls apart.</h2>
+    <Section id="features">
+      <div className="space-y-20">
+        <div className="max-w-2xl space-y-4">
+          <Label className="text-cyan-400">Features</Label>
+          <Heading className="text-white">Built for speed and <span className="text-primary-light italic">absolute privacy.</span></Heading>
         </div>
-        <p className="text-lg text-muted-foreground">
-          Invoke is not only for quiet desks. It is for commutes, shared spaces, airport gates, and rushed work moments where voice is the fastest input you still control.
-        </p>
-      </div>
-
-      <div className="scenario-grid grid gap-5 lg:grid-cols-3">
-        {realLifeMoments.map((moment, index) => {
-          const Icon = moment.icon
-          return (
-            <article key={moment.title} className="scenario-card" style={{ "--scenario-delay": `${index * 90}ms` } as CSSProperties}>
-              <div className="scenario-media">
-                <div className="scenario-orbit" />
-                <div className="scenario-icon">
-                  <Icon className="h-6 w-6" />
-                </div>
-                <div className="scenario-proof">{moment.proof}</div>
+        <div className="grid md:grid-cols-2 gap-x-20 gap-y-16">
+          {features.map((feature, idx) => (
+            <div key={feature.title} className="group space-y-6">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10 group-hover:bg-primary/20 transition-all duration-500">
+                <feature.icon className="h-6 w-6 text-white" />
               </div>
-              <div className="p-6">
-                <span className="font-mono text-xs uppercase tracking-[0.16em] text-primary">{moment.label}</span>
-                <h3 className="mt-4 text-2xl text-ink">{moment.title}</h3>
-                <p className="mt-4 text-sm text-muted-foreground">{moment.scene}</p>
-                <div className="mt-6 rounded-xl bg-muted p-4 text-sm text-ink">"{moment.command}"</div>
-                <div className="mt-4 flex items-start gap-3 text-sm text-muted-foreground">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>{moment.outcome}</span>
-                </div>
-              </div>
-            </article>
-          )
-        })}
-      </div>
-    </SectionWrapper>
-  )
-}
-
-function HowItWorksSection() {
-  return (
-    <SectionWrapper id="how-it-works" variant="default">
-      <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-        <div>
-          <span className="section-kicker">How It Works</span>
-          <h2 className="mt-4 text-ink">Speak naturally. Invoke routes your words into actions.</h2>
-          <p className="mt-5 text-lg text-muted-foreground">
-            The core architecture is simple: voice input, speech-to-text, local intent classification, tool execution, then a result or completed action.
-          </p>
-        </div>
-        <div className="pipeline-panel action-pipeline">
-          {pipeline.map((step, index) => (
-            <div key={step.label} className="pipeline-step">
-              <div className="pipeline-index">{String(index + 1).padStart(2, "0")}</div>
-              <div>
-                <h3 className="text-lg text-ink">{step.label}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{step.body}</p>
+              <div className="space-y-3">
+                <h3 className="text-2xl font-bold text-white tracking-tight">{feature.title}</h3>
+                <p className="text-base text-white/40 leading-relaxed max-w-sm">{feature.body}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
-    </SectionWrapper>
+    </Section>
   )
 }
 
-function LocalAiSection() {
+function UseCaseSection() {
   return (
-    <SectionWrapper id="local-ai" variant="royal">
-      <div className="grid gap-8 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-        <div>
-          <span className="section-kicker section-kicker-light">Local AI</span>
-          <h2 className="mt-4 text-white">Powered by Qwen 3 0.6B through Ollama.</h2>
-          <p className="mt-5 text-lg text-white/72">
-            Invoke does not use Qwen as a big chatbot. It uses the model for one focused job: understanding what the user wants and converting speech into structured actions.
-          </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
-            {["Small enough to run locally", "Fast for intent classification", "No cloud LLM required for routing", "Upgradeable for larger models"].map((item) => (
-              <div key={item} className="flex items-center gap-3 text-sm text-white/84">
-                <CheckCircle2 className="h-4 w-4 text-cyan-200" />
-                {item}
-              </div>
-            ))}
-          </div>
+    <Section id="real-life" className="bg-black/20">
+      <div className="space-y-16">
+        <div className="max-w-2xl space-y-4">
+          <Label className="text-cyan-400">Use Cases</Label>
+          <Heading className="text-white">Everywhere typing falls apart.</Heading>
         </div>
-        <div className="code-card">
-          <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4">
-            <span className="font-mono text-xs uppercase tracking-[0.18em] text-cyan-200">Intent payload</span>
-            <span className="rounded-full bg-emerald-300/12 px-3 py-1 text-xs text-emerald-100">local</span>
-          </div>
-          <pre>{`User:
-"Search the web for OpenAI official website"
-
-Qwen 3 0.6B:
-{
-  tool: "COMPOSIO_SEARCH_WEB",
-  parameters: {
-    query: "OpenAI official website"
-  }
-}
-
-Invoke:
-execute(action)`}</pre>
+        <div className="space-y-12 max-w-5xl">
+          {useCases.map((moment) => (
+            <div key={moment.title} className="grid gap-12 lg:grid-cols-2 lg:items-center py-12 border-t border-white/5 first:border-0">
+              <div className="space-y-6">
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-primary-light">{moment.label}</span>
+                <h3 className="text-3xl font-bold text-white tracking-tight">{moment.title}</h3>
+                <p className="text-white/50 leading-relaxed">{moment.desc}</p>
+                <a href="#" className="inline-flex items-center gap-2 text-sm font-semibold text-primary-light hover:translate-x-1 transition-transform">
+                  See how it works <ArrowRight className="h-4 w-4" />
+                </a>
+              </div>
+              
+              <div className="relative group/card">
+                <div className="absolute -inset-2 bg-primary/20 blur-xl opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
+                <div className="relative rounded-2xl bg-white/5 p-8 shadow-sm ring-1 ring-white/10 transition-all duration-300 group-hover/card:bg-white/[0.08] group-hover/card:-translate-y-1">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Command</p>
+                  </div>
+                  <p className="text-lg font-medium text-white italic leading-snug">"{moment.command}"</p>
+                  <div className="mt-6 flex items-start gap-4 rounded-xl bg-white/5 p-5">
+                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-primary-light" />
+                    <p className="text-sm leading-relaxed text-white/60">{moment.outcome}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    </SectionWrapper>
+    </Section>
   )
 }
 
 function IntegrationsSection() {
   return (
-    <SectionWrapper id="integrations" variant="alternate">
-      <div className="mb-12 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-2xl">
-          <span className="section-kicker">Integrations</span>
-          <h2 className="mt-4 text-ink">One voice layer for the tools you already use.</h2>
+    <Section id="integrations">
+      <div className="space-y-16">
+        <div className="max-w-2xl space-y-4">
+          <Label className="text-cyan-400">Integrations</Label>
+          <Heading className="text-white">One layer for all your tools.</Heading>
         </div>
-        <p className="max-w-md text-muted-foreground">
-          Composio lets Invoke connect spoken intent to real app actions, from developer workflows to everyday messages.
-        </p>
-      </div>
-      <div className="stagger-grid grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {integrations.map((integration) => {
-          const Icon = integration.icon
-          return (
-            <article key={integration.name} className="surface-card p-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg text-ink">{integration.name}</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
+          {integrations.map((item) => (
+            <div key={item.name} className="flex items-center gap-4 group cursor-default">
+              <div className="flex h-8 w-8 items-center justify-center rounded bg-white/5 text-white/40 group-hover:text-white transition-colors">
+                <item.icon className="h-4 w-4" />
               </div>
-              <p className="mt-5 rounded-lg bg-muted p-4 text-sm text-muted-foreground">"{integration.command}"</p>
-            </article>
-          )
-        })}
-      </div>
-    </SectionWrapper>
-  )
-}
-
-function PlatformsSection() {
-  return (
-    <SectionWrapper id="platforms" variant="default">
-      <div className="mb-12 max-w-2xl">
-        <span className="section-kicker">Desktop + Android</span>
-        <h2 className="mt-4 text-ink">One assistant across computer and phone.</h2>
-      </div>
-      <div className="stagger-grid grid gap-5 lg:grid-cols-2">
-        <article className="platform-card">
-          <Monitor className="h-7 w-7 text-primary" />
-          <h3>Windows desktop app</h3>
-          <p>Tauri desktop app with global shortcuts, local Whisper transcription, Ollama settings, Qwen 3 0.6B model support, and Composio actions.</p>
-        </article>
-        <article className="platform-card">
-          <Smartphone className="h-7 w-7 text-primary" />
-          <h3>Android voice bubble</h3>
-          <p>Kotlin Android app concept with floating mic access, permissions onboarding, privacy mode, dictionary, styles, snippets, and advanced setup when needed.</p>
-        </article>
-      </div>
-    </SectionWrapper>
-  )
-}
-
-function PrivacySection() {
-  return (
-    <SectionWrapper id="privacy" variant="alternate">
-      <div className="privacy-band">
-        <div>
-          <ShieldCheck className="mb-8 h-10 w-10 text-primary" />
-          <span className="section-kicker">Privacy</span>
-          <h2 className="mt-4 text-ink">Private by design.</h2>
+              <span className="text-sm font-medium text-white/40 group-hover:text-white transition-colors">{item.name}</span>
+            </div>
+          ))}
         </div>
-        <p className="max-w-2xl text-lg text-muted-foreground">
-          Invoke supports local AI through Ollama, so core intent classification can run on your own machine. Privacy mode keeps data stored on your device. Cloud sync and app integrations are optional and controlled by the user.
-        </p>
       </div>
-    </SectionWrapper>
+    </Section>
   )
 }
 
-function ExamplesSection() {
+function CallToAction() {
   return (
-    <SectionWrapper id="examples" variant="default">
-      <div className="mb-10 max-w-2xl">
-        <span className="section-kicker">Examples</span>
-        <h2 className="mt-4 text-ink">Real commands, real outcomes.</h2>
+    <Section className="pb-32 border-t border-white/5">
+      <div className="max-w-2xl space-y-8">
+        <Heading className="text-4xl md:text-5xl lg:text-6xl font-serif text-white tracking-tight">Private by design.</Heading>
+        <Subtext className="text-xl text-white/50">
+          Invoke supports local AI through Ollama, so core intent classification can run on your own machine.
+        </Subtext>
+        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+          <a href="https://github.com/somewherelostt/Invoke" target="_blank" className="px-8 py-4 bg-white text-primary rounded-full font-bold hover:bg-white/90 transition-colors text-center">
+            Get Started
+          </a>
+        </div>
       </div>
-      <div className="command-list command-list-animated">
-        {actionExamples.map((command, index) => (
-          <div key={command} className="command-row">
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <p>"{command}"</p>
-            <ArrowRight className="h-4 w-4" />
-          </div>
-        ))}
-      </div>
-    </SectionWrapper>
+    </Section>
   )
 }
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[#08111F] text-white selection:bg-primary/30">
       <HeroSection />
       <ProblemSection />
-      <FeatureSection />
-      <RealLifeSection />
-      <HowItWorksSection />
-      <LocalAiSection />
+      <SolutionSection />
+      <FeaturesSection />
+      <UseCaseSection />
       <IntegrationsSection />
-      <PlatformsSection />
-      <PrivacySection />
-      <ExamplesSection />
+      <CallToAction />
       <FooterSection />
     </main>
   )
