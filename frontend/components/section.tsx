@@ -3,19 +3,20 @@
 import { useEffect, useRef, ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
-interface SectionWrapperProps {
+interface SectionProps extends React.HTMLAttributes<HTMLElement> {
   children: ReactNode
-  className?: string
-  id?: string
-  variant?: "default" | "alternate" | "royal"
+  variant?: "default" | "alternate" | "royal" | "transparent"
+  containerClass?: string
 }
 
-export function SectionWrapper({
+export function Section({
   children,
   className,
   id,
-  variant = "default"
-}: SectionWrapperProps) {
+  variant = "default",
+  containerClass,
+  ...props
+}: SectionProps) {
   const sectionRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -39,8 +40,9 @@ export function SectionWrapper({
 
   const variantStyles = {
     default: "bg-background",
-    alternate: "bg-off-white",
-    royal: "bg-royal-blue text-white"
+    alternate: "bg-muted/40",
+    royal: "bg-royal-blue text-white",
+    transparent: "bg-transparent",
   }
 
   return (
@@ -48,12 +50,13 @@ export function SectionWrapper({
       ref={sectionRef}
       id={id}
       className={cn(
-        "section-reveal py-20 md:py-32 px-6 md:px-12 lg:px-20",
+        "section-reveal py-24 px-6 md:px-12 lg:px-20",
         variantStyles[variant],
         className
       )}
+      {...props}
     >
-      <div className="max-w-6xl mx-auto">
+      <div className={cn("max-w-7xl mx-auto w-full", containerClass)}>
         {children}
       </div>
     </section>
